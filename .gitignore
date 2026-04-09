@@ -1,0 +1,31 @@
+# --- Editor e IDE ---
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Database e XAMPP ---
+# dump temporanei o log di mysql sviste etc
+*.log
+/opt/lampp/
+xampp-linux-*.run
+
+# --- Sistema Operativo ---
+.directory
+.Trash-*
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+
+# --- File di Progetto Temporanei ---
+# Immagini di test o file caricati durante lo sviluppo che non vuoi nel repo
+/assets/frames/test_*
+/assets/covers/test_*
+
+# --- Compressione ---
+*.zip
+*.rar
+*.7z
