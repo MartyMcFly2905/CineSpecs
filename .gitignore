@@ -24,6 +24,7 @@ $RECYCLE.BIN/
 # Immagini di test o file caricati durante lo sviluppo che non vuoi nel repo
 /assets/frames/test_*
 /assets/covers/test_*
+Personale.md
 
 # --- Compressione ---
 *.zip
