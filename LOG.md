@@ -9,7 +9,6 @@
   * root con file principali
   * cartelle separate (`php/`, `css/`, `js/`, `assets/`, `docs/`)
 * Aggiunti file di configurazione e documentazione base
-* Definite convenzioni di sviluppo (`AGENTS.md`)
 
 ---
 
