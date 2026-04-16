@@ -70,3 +70,24 @@ Test eseguiti su XAMPP:
 **Esito:**  
 → Database e connessione **verificati e compatibili con l’ambiente del corso**
 
+### 🔹 Homepage base (index.php)
+
+* Implementata homepage dinamica con PHP + PDO
+* Recupero dati da tabella `FILM`
+* Query dinamica con:
+
+  * filtro per titolo (`LIKE`)
+  * filtro per anno (`anno_uscita`)
+* Uso di prepared statements
+* Output sanitizzato con `htmlspecialchars`
+
+**Funzionalità:**
+
+* ricerca per titolo
+* filtro per anno
+* lista film
+* gestione stato vuoto
+* gestione errore DB
+
+**Esito:**
+→ Homepage funzionante e collegata al database
