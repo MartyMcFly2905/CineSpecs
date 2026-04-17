@@ -14,12 +14,7 @@
 .brand {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    text-decoration: none;
-}
-
-.brand:hover {
-    text-decoration: none;
+    gap: 0.9rem;
 }
 
 .brand-logo {

@@ -45,17 +45,42 @@ try {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CineSpecs · Archivio hardware cinematografico</title>
-    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            var savedTheme = '';
+
+            try {
+                savedTheme = localStorage.getItem('cinespecs-theme');
+            } catch (error) {
+                savedTheme = '';
+            }
+
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        }());
+    </script>
+    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
     <link rel="stylesheet" href="css/layout.css">
 </head>
 <body>
 <header class="site-header">
     <div class="container header-inner">
         <a href="index.php" class="brand">
-            <img src="assets/icons/logo.png" alt="CineSpecs" class="brand-logo">
+            <img
+                src="assets/icons/logo.png"
+                alt="CineSpecs"
+                class="brand-logo"
+                id="brand-logo"
+                data-light-logo="assets/icons/logo_dark.png"
+                data-dark-logo="assets/icons/logo.png"
+            >
             <span class="visually-hidden">CineSpecs</span>
         </a>
-        <p class="header-meta">Hardware usato nei film</p>
+        <div class="header-actions">
+            <p class="header-meta">Hardware usato nei film</p>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
+        </div>
     </div>
 </header>
     <main>
@@ -137,5 +162,6 @@ try {
             </section>
         </div>
     </main>
+    <script src="js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/js/theme-toggle.js'); ?>"></script>
 </body>
 </html>

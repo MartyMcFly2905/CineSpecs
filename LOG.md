@@ -70,7 +70,7 @@ Test eseguiti su XAMPP:
 **Esito:**  
 → Database e connessione **verificati e compatibili con l’ambiente del corso**
 
-### 🔹 Homepage base (index.php)
+### 🔹 Homepage base (index.php + UI)
 
 * Implementata homepage dinamica con PHP + PDO
 * Recupero dati da tabella `FILM`
@@ -78,8 +78,22 @@ Test eseguiti su XAMPP:
 
   * filtro per titolo (`LIKE`)
   * filtro per anno (`anno_uscita`)
-* Uso di prepared statements
-* Output sanitizzato con `htmlspecialchars`
+* Uso di prepared statements (PDO)
+* Output sanitizzato con `htmlspecialchars` (protezione XSS)
+
+**UI e struttura:**
+
+* Layout responsive con CSS separato (`style.css`, `layout.css`)
+* Griglia film con card
+* Form di ricerca semantico e accessibile
+* Logo cliccabile (ritorno homepage)
+
+**JavaScript:**
+
+* Implementato toggle tema (`theme-toggle.js`)
+* Gestione stato tramite `data-theme`
+* Persistenza preferenza con `localStorage`
+* Aggiornamento dinamico logo e UI
 
 **Funzionalità:**
 
@@ -88,6 +102,7 @@ Test eseguiti su XAMPP:
 * lista film
 * gestione stato vuoto
 * gestione errore DB
+* cambio tema (chiaro/scuro)
 
 **Esito:**
-→ Homepage funzionante e collegata al database
+→ Homepage funzionante, stilizzata e interattiva, integrata con database e pronta per estensioni future
