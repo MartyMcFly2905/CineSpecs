@@ -79,12 +79,12 @@ img {
 }
 
 .container {
-    width: min(1440px, 100% - 3rem);
+    width: min(1120px, 100% - 2rem);
     margin-inline: auto;
 }
 
 section + section {
-    margin-top: 2.5rem;
+    margin-top: 2rem;
 }
 
 button,
@@ -142,12 +142,12 @@ body .film-card {
 }
 
 body .search-panel {
-    border-radius: 22px;
-    padding: 2rem;
+    border-radius: 18px;
+    padding: 1.5rem;
 }
 
 body .search-panel form {
-    gap: 1.25rem;
+    gap: 1rem;
 }
 
 body .field-group input,
@@ -156,13 +156,13 @@ body .field-group select {
     border-color: var(--color-border);
     color: var(--color-text);
     box-shadow: inset 0 1px 2px var(--color-shadow);
-    min-height: 3.15rem;
+    min-height: 2.85rem;
 }
 
 body .field-group button {
     color: var(--color-button-text);
-    min-height: 3.15rem;
-    padding-inline: 1.45rem;
+    min-height: 2.85rem;
+    padding-inline: 1.2rem;
 }
 
 body .field-group button:hover {
@@ -170,13 +170,13 @@ body .field-group button:hover {
 }
 
 body .film-grid {
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-    gap: 1.9rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
 }
 
 body .film-card {
-    border-radius: 22px;
-    padding: 1.3rem;
+    border-radius: 18px;
+    padding: 1rem;
 }
 
 body .film-card:hover {
@@ -186,13 +186,13 @@ body .film-card:hover {
 
 body .film-card figure {
     background-color: var(--color-panel-soft);
-    border-radius: 16px;
+    border-radius: 14px;
 }
 
 body .film-actions a {
     color: var(--color-action-text);
     font-weight: 600;
-    padding: 0.75rem 1.2rem;
+    padding: 0.65rem 1rem;
 }
 
 body .empty-state {

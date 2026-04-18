@@ -85,7 +85,8 @@ INSERT INTO UTENTI (username, email, password_hash, ruolo) VALUES
 
 INSERT INTO FILM (titolo, anno_uscita, regista, sinossi, copertina_path) VALUES
 ('Alien', 1979, 'Ridley Scott', 'L''equipaggio della Nostromo affronta una minaccia aliena.', 'assets/covers/alien.jpg'),
-('WarGames', 1983, 'John Badham', 'Un adolescente entra per errore in un sistema militare.', 'assets/covers/wargames.jpg');
+('WarGames', 1983, 'John Badham', 'Un adolescente entra per errore in un sistema militare.', 'assets/covers/wargames.jpg'),
+('Ritorno al futuro', 1985, 'Robert Zemeckis', 'Un ragazzo viaggia accidentalmente nel passato con una DeLorean modificata.', 'assets/covers/RAF1.jpg');
 
 INSERT INTO HARDWARE (nome_modello, produttore, anno_rilascio, descrizione, curiosita, prop_fittizio, immagine_path) VALUES
 ('DEC VT100', 'Digital Equipment Corporation', 1978, 'Terminale video molto usato come riferimento visivo nel cinema.', 'Appare in molte produzioni fantascientifiche e tecnologiche.', 0, 'assets/icons/vt100.png'),

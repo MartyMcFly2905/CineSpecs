@@ -1,0 +1,144 @@
+.viewer-back-link {
+    margin: 0 0 0.85rem;
+    font-size: 0.9rem;
+}
+
+.viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.viewer-header h1 {
+    margin: 0;
+    font-size: 1.7rem;
+}
+
+.viewer-header p {
+    margin: 0.25rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.viewer-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 272px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.viewer-main,
+.hardware-sidebar,
+.timeline-item {
+    background-color: var(--color-panel);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 10px 20px var(--color-shadow);
+}
+
+.viewer-main {
+    border-radius: 15px;
+    padding: 0.85rem;
+}
+
+.frame-stage {
+    margin: 0;
+}
+
+.frame-tag-layer {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: var(--color-panel-soft);
+    border: 1px solid var(--color-border);
+}
+
+.frame-tag-layer img {
+    width: 100%;
+    max-height: 52vh;
+    object-fit: contain;
+}
+
+.frame-stage figcaption {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-top: 0.65rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+}
+
+.hardware-sidebar {
+    border-radius: 15px;
+    padding: 1rem;
+    min-height: 15.3rem;
+}
+
+.hardware-sidebar h2 {
+    margin: 0 0 0.55rem;
+    font-size: 1rem;
+}
+
+.hardware-sidebar p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.timeline-list {
+    list-style: none;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(153px, 1fr));
+    gap: 0.85rem;
+}
+
+.timeline-item {
+    border-radius: 12px;
+    padding: 0.65rem;
+}
+
+.timeline-item--active {
+    border-color: var(--color-accent);
+}
+
+.timeline-item img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    background-color: var(--color-panel-soft);
+}
+
+.timeline-item h3 {
+    margin: 0.55rem 0 0.1rem;
+    font-size: 0.9rem;
+}
+
+.timeline-item p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+    .viewer-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 1200px) {
+    .viewer-page main {
+        padding-top: 1.7rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .viewer-header,
+    .frame-stage figcaption {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
