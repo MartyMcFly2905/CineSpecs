@@ -15,6 +15,7 @@
     --color-action-text: #0b7f6d;
     --color-focus-ring: rgba(11, 127, 109, 0.22);
     --font-base: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-terminal: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 }
 
 :root[data-theme="dark"] {
@@ -79,7 +80,7 @@ img {
 }
 
 .container {
-    width: min(1120px, 100% - 2rem);
+    width: min(1320px, 100% - 1.25rem);
     margin-inline: auto;
 }
 
@@ -170,13 +171,13 @@ body .field-group button:hover {
 }
 
 body .film-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(247px, 1fr));
+    gap: 1.26rem;
 }
 
 body .film-card {
     border-radius: 18px;
-    padding: 1rem;
+    padding: 0.9rem;
 }
 
 body .film-card:hover {
@@ -189,10 +190,11 @@ body .film-card figure {
     border-radius: 14px;
 }
 
+body .film-meta a,
 body .film-actions a {
     color: var(--color-action-text);
     font-weight: 600;
-    padding: 0.65rem 1rem;
+    padding: 0.5rem 0.75rem;
 }
 
 body .empty-state {

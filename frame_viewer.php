@@ -109,24 +109,27 @@ if ($film && !$dbError && !$mainFrame) {
                     <figure class="frame-stage">
                         <div class="frame-tag-layer">
                             <img
+                                id="frame-image"
                                 src="<?php echo htmlspecialchars($mainFrame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
                                 alt="Frame di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-frame-id="<?php echo (int) $mainFrame['id_frame']; ?>"
                             >
+                            <div id="tag-layer"></div>
                         </div>
                         <figcaption>
-                            <span>
+                            <span id="frame-timestamp">
                                 <?php echo $mainFrame['timestamp_frame'] ? htmlspecialchars($mainFrame['timestamp_frame'], ENT_QUOTES, 'UTF-8') : 'Timestamp non disponibile'; ?>
                             </span>
-                            <?php if (!empty($mainFrame['descrizione_scena'])): ?>
-                                <span><?php echo htmlspecialchars($mainFrame['descrizione_scena'], ENT_QUOTES, 'UTF-8'); ?></span>
-                            <?php endif; ?>
+                            <span id="frame-description"><?php echo !empty($mainFrame['descrizione_scena']) ? htmlspecialchars($mainFrame['descrizione_scena'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
                         </figcaption>
                     </figure>
                 </div>
 
-                <aside class="hardware-sidebar" aria-labelledby="hardware-title">
+                <aside class="hardware-sidebar" id="hardware-sidebar" aria-labelledby="hardware-title">
                     <h2 id="hardware-title">Hardware</h2>
-                    <p>Seleziona un Pulse-Tag per vedere i dettagli hardware.</p>
+                    <div id="sidebar-content">
+                        <p>Seleziona un Pulse-Tag per vedere i dettagli hardware.</p>
+                    </div>
                 </aside>
             </section>
 
@@ -139,7 +142,16 @@ if ($film && !$dbError && !$mainFrame) {
                 <ol class="timeline-list">
                     <?php foreach ($frames as $index => $frame): ?>
                         <li>
-                            <article class="timeline-item<?php echo $index === 0 ? ' timeline-item--active' : ''; ?>">
+                            <article
+                                class="timeline-item<?php echo $index === 0 ? ' timeline-item--active' : ''; ?>"
+                                role="button"
+                                tabindex="0"
+                                data-frame-id="<?php echo (int) $frame['id_frame']; ?>"
+                                data-frame-src="<?php echo htmlspecialchars($frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-frame-timestamp="<?php echo $frame['timestamp_frame'] ? htmlspecialchars($frame['timestamp_frame'], ENT_QUOTES, 'UTF-8') : 'Timestamp non disponibile'; ?>"
+                                data-frame-description="<?php echo !empty($frame['descrizione_scena']) ? htmlspecialchars($frame['descrizione_scena'], ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                data-frame-alt="Frame di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
+                            >
                                 <img
                                     src="<?php echo htmlspecialchars($frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
                                     alt="Miniatura frame <?php echo $index + 1; ?> di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
@@ -160,5 +172,6 @@ if ($film && !$dbError && !$mainFrame) {
 </main>
 
 <script src="js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/js/theme-toggle.js'); ?>"></script>
+<script src="js/viewer.js?v=<?php echo filemtime(__DIR__ . '/js/viewer.js'); ?>"></script>
 </body>
 </html>

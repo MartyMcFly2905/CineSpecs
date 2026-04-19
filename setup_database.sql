@@ -88,14 +88,23 @@ INSERT INTO FILM (titolo, anno_uscita, regista, sinossi, copertina_path) VALUES
 ('WarGames', 1983, 'John Badham', 'Un adolescente entra per errore in un sistema militare.', 'assets/covers/wargames.jpg'),
 ('Ritorno al futuro', 1985, 'Robert Zemeckis', 'Un ragazzo viaggia accidentalmente nel passato con una DeLorean modificata.', 'assets/covers/RAF1.jpg');
 
-INSERT INTO HARDWARE (nome_modello, produttore, anno_rilascio, descrizione, curiosita, prop_fittizio, immagine_path) VALUES
-('DEC VT100', 'Digital Equipment Corporation', 1978, 'Terminale video molto usato come riferimento visivo nel cinema.', 'Appare in molte produzioni fantascientifiche e tecnologiche.', 0, 'assets/icons/vt100.png'),
-('IMSAI 8080', 'IMS Associates, Inc.', 1975, 'Microcomputer storico associato all''immaginario hacker degli anni 80.', 'Diventato iconico anche grazie al cinema e alla TV.', 0, 'assets/icons/imsai-8080.png');
+INSERT INTO HARDWARE (nome_modello, produttore, anno_rilascio, descrizione, curiosita, prop_fittizio) VALUES
+('DEC VT100', 'Digital Equipment Corporation', 1978, 'Terminale video molto usato come riferimento visivo nel cinema.', 'Appare in molte produzioni fantascientifiche e tecnologiche.', 0),
+('IMSAI 8080', 'IMS Associates, Inc.', 1975, 'Microcomputer storico associato all''immaginario hacker degli anni 80.', 'Diventato iconico anche grazie al cinema e alla TV.', 0),
+('JVC GR-C1', 'JVC', 1984, 'Videocamera portatile a cassette compatte, usata da Marty per registrare l''esperimento nel parcheggio.', 'E un esempio riconoscibile della tecnologia video consumer degli anni 80.', 0),
+('Flux Capacitor', 'Emmett Brown', 1985, 'Dispositivo fittizio che rende possibile il viaggio nel tempo nella DeLorean.', 'Nel film viene presentato come l''invenzione decisiva di Doc Brown.', 1),
+('Time Circuits Display', 'Emmett Brown', 1985, 'Pannello fittizio della DeLorean con destinazione, presente e ultima partenza.', 'Serve al viewer per testare un tag su un dettaglio elettronico ben visibile.', 1);
 
 INSERT INTO FRAME (id_film, immagine_path, timestamp_frame, descrizione_scena) VALUES
 (1, 'assets/frames/alien-console.jpg', '00:12:45', 'Console di bordo della Nostromo in primo piano.'),
-(2, 'assets/frames/wargames-imsai.jpg', '00:07:18', 'Postazione con microcomputer nella camera del protagonista.');
+(2, 'assets/frames/wargames-imsai.jpg', '00:07:18', 'Postazione con microcomputer nella camera del protagonista.'),
+(3, 'assets/frames/bttf-camcorder.jpg', '00:21:30', 'Marty riprende Doc durante il primo esperimento nel parcheggio.'),
+(3, 'assets/frames/bttf-flux-capacitor.jpg', '00:25:05', 'Dettaglio del dispositivo installato nella DeLorean.'),
+(3, 'assets/frames/bttf-time-circuits.jpg', '00:27:42', 'Doc mostra i circuiti temporali della DeLorean.');
 
 INSERT INTO TAGS (id_frame, id_hardware, id_utente, coord_x, coord_y) VALUES
 (1, 1, 1, 46.50, 61.20),
-(2, 2, 2, 38.00, 54.40);
+(2, 2, 2, 38.00, 54.40),
+(3, 3, 1, 28.00, 45.00),
+(4, 4, 1, 48.50, 55.00),
+(5, 5, 2, 49.00, 42.00);

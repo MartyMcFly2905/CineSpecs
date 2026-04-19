@@ -144,15 +144,16 @@ try {
                                             <span class="film-card__placeholder">Cover non disponibile</span>
                                         <?php endif; ?>
                                     </figure>
-                                    <div>
+                                    <div class="film-card-body">
                                         <h3><?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?></h3>
                                         <div class="film-meta">
-                                            <span><?php echo $film['anno_uscita'] ? (int) $film['anno_uscita'] : 'Anno n/d'; ?></span>
-                                            <span><?php echo $film['regista'] ? htmlspecialchars($film['regista'], ENT_QUOTES, 'UTF-8') : 'Regista n/d'; ?></span>
+                                            <span>
+                                                <?php echo $film['anno_uscita'] ? (int) $film['anno_uscita'] : 'Anno n/d'; ?>
+                                                ·
+                                                <?php echo $film['regista'] ? htmlspecialchars($film['regista'], ENT_QUOTES, 'UTF-8') : 'Regista n/d'; ?>
+                                            </span>
+                                            <a href="frame_viewer.php?film=<?php echo (int) $film['id_film']; ?>">Apri frame</a>
                                         </div>
-                                    </div>
-                                    <div class="film-actions">
-                                        <a href="frame_viewer.php?film=<?php echo (int) $film['id_film']; ?>">Apri frame</a>
                                     </div>
                                 </article>
                             </li>

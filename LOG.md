@@ -143,3 +143,112 @@ Test eseguiti su XAMPP:
 
 **Esito:**
 → Viewer minimo funzionante, homepage e viewer coerenti, film senza frame disponibile per test
+
+---
+
+## Fase 2
+
+### 🔹 API tag del viewer
+
+* Implementato `php/api_get_tags.php`
+* L'endpoint:
+
+  * accetta solo richieste `GET`
+  * valida `id_frame` lato server
+  * usa PDO e prepared statements
+  * restituisce JSON pulito
+  * recupera coordinate tag e dati hardware collegati
+  * include anche descrizione e curiosita hardware
+
+**Esito:**
+→ Backend pronto per caricare i Pulse-Tag del frame viewer tramite JavaScript
+
+---
+
+### 🔹 Integrazione viewer e Pulse-Tag
+
+* Aggiornato `frame_viewer.php` con:
+
+  * `#frame-image`
+  * `data-frame-id`
+  * `#tag-layer`
+  * `#hardware-sidebar`
+  * `#sidebar-content`
+  * `#frame-timestamp`
+  * `#frame-description`
+  * inclusione di `js/viewer.js` con cache busting
+
+* Implementato `js/viewer.js`:
+
+  * caricamento tag con Fetch API
+  * creazione Pulse-Tag sopra il frame
+  * posizionamento con coordinate percentuali
+  * click sul tag con dettagli hardware in sidebar
+  * gestione errori semplice
+
+**Esito:**
+→ Viewer interattivo funzionante, con tag cliccabili e sidebar dati hardware
+
+---
+
+### 🔹 Timeline interattiva
+
+* Aggiunti attributi `data-*` alle miniature della timeline
+* Implementato cambio frame senza ricaricare pagina
+* Al click su una miniatura:
+
+  * cambia immagine principale
+  * aggiorna `data-frame-id`
+  * aggiorna timestamp e descrizione
+  * sposta lo stato `.timeline-item--active`
+  * ricarica i tag del nuovo frame
+
+**Esito:**
+→ Timeline del viewer navigabile e collegata ai tag del frame corrente
+
+---
+
+### 🔹 Stile viewer e catalogo
+
+* Completati gli stili in `css/components.css`
+* Aggiunto `css/animations.css` per animare i Pulse-Tag
+* Rifiniti:
+
+  * layout viewer
+  * sidebar hardware
+  * timeline
+  * stato attivo delle miniature
+  * card del catalogo film
+
+* Aggiunta variabile `--font-terminal` in `style.css`
+* Allargato il container generale e bilanciate le dimensioni delle card film
+
+**Esito:**
+→ Interfaccia piu coerente, responsive e leggibile
+
+---
+
+### 🔹 Dati di test per Ritorno al futuro
+
+* Aggiornato `setup_database.sql`
+* Aggiunti:
+
+  * 3 frame per `Ritorno al futuro`
+  * 3 hardware collegati
+  * 3 tag con coordinate gia compilate
+
+**Esito:**
+→ Dataset pronto per testare timeline, cambio frame e ricaricamento tag
+
+---
+
+### 🔹 Rimozione icone hardware dedicate
+
+* Rimossi riferimenti alle icone hardware dal seed SQL
+* Eliminati file icona hardware non piu usati
+* Mantenuti solo i loghi applicativi in `assets/icons`
+* Lasciato il campo `HARDWARE.immagine_path` nello schema per eventuale futura compatibilita
+
+**Esito:**
+→ Sidebar e viewer usano solo dettagli testuali hardware, senza dipendere da immagini dedicate
+
