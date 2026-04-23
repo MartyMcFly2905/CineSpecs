@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require __DIR__ . '/php/config.php';
 
 $searchTerm = trim($_GET['q'] ?? '');
@@ -6,6 +8,8 @@ $yearFilter = filter_input(INPUT_GET, 'year', FILTER_VALIDATE_INT);
 $films = [];
 $availableYears = [];
 $dbError = false;
+$isLoggedIn = isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo']);
+$sessionUsername = $isLoggedIn ? htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8') : '';
 
 try {
     $yearStmt = $pdo->query('SELECT DISTINCT anno_uscita FROM FILM WHERE anno_uscita IS NOT NULL ORDER BY anno_uscita DESC');
@@ -47,7 +51,7 @@ try {
     <title>CineSpecs · Archivio hardware cinematografico</title>
     <script>
         (function () {
-            var savedTheme = '';
+            let savedTheme = '';
 
             try {
                 savedTheme = localStorage.getItem('cinespecs-theme');
@@ -79,6 +83,24 @@ try {
         </a>
         <div class="header-actions">
             <p class="header-meta">Hardware usato nei film</p>
+            <div class="header-auth">
+                <?php if ($isLoggedIn): ?>
+                    <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
+                    <a href="dashboard.php">Dashboard</a>
+                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                        <a href="admin.php">Admin</a>
+                    <?php endif; ?>
+                    <a href="logout.php">Logout</a>
+                <?php else: ?>
+                    <details class="auth-menu">
+                        <summary class="theme-toggle">Login</summary>
+                        <div class="auth-menu-panel">
+                            <a href="login.php">Accedi</a>
+                            <a href="register.php">Registrati</a>
+                        </div>
+                    </details>
+                <?php endif; ?>
+            </div>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
         </div>
     </div>

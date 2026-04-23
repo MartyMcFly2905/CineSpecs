@@ -136,10 +136,17 @@ body .theme-toggle:hover {
 }
 
 body .search-panel,
-body .film-card {
+body .film-card,
+body .empty-state,
+body .viewer-main,
+body .hardware-sidebar,
+body .timeline-item,
+body .auth-card,
+body .auth-intro {
     background-color: var(--color-panel);
     border-color: var(--color-border);
     box-shadow: 0 14px 30px var(--color-shadow);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
 }
 
 body .search-panel {
@@ -197,14 +204,14 @@ body .film-actions a {
     padding: 0.5rem 0.75rem;
 }
 
-body .empty-state {
-    background-color: var(--color-panel);
-    box-shadow: 0 10px 22px var(--color-shadow);
-}
-
 :root[data-theme="dark"] body .search-panel,
 :root[data-theme="dark"] body .film-card,
-:root[data-theme="dark"] body .empty-state {
+:root[data-theme="dark"] body .empty-state,
+:root[data-theme="dark"] body .viewer-main,
+:root[data-theme="dark"] body .hardware-sidebar,
+:root[data-theme="dark"] body .timeline-item,
+:root[data-theme="dark"] body .auth-card,
+:root[data-theme="dark"] body .auth-intro {
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0));
 }
 

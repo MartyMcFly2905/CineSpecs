@@ -1,5 +1,5 @@
 (function () {
-    var savedTheme = '';
+    let savedTheme = '';
 
     try {
         savedTheme = localStorage.getItem('cinespecs-theme');

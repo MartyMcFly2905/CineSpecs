@@ -252,3 +252,66 @@ Test eseguiti su XAMPP:
 **Esito:**
 → Sidebar e viewer usano solo dettagli testuali hardware, senza dipendere da immagini dedicate
 
+---
+
+## Fase 3
+
+### 🔹 Autenticazione base e pagine riservate
+
+* Creati `login.php`, `register.php` e `logout.php`
+* Implementato `php/auth.php` come endpoint unico JSON per:
+
+  * registrazione
+  * login
+  * logout
+* Aggiunta validazione client-side in `js/validation.js`
+* Aggiunti controlli di sessione in `dashboard.php` e `admin.php`
+* Gestita distinzione ruolo `admin` / `contributor`
+
+**Esito:**
+→ Flusso minimo di autenticazione funzionante con sessioni PHP e accesso protetto alle aree riservate
+
+---
+
+### 🔹 Header dinamico con stato utente
+
+* Aggiornati `index.php` e `frame_viewer.php`
+* Se l'utente non e autenticato compare un menu rapido con link a login e registrazione
+* Se l'utente e autenticato compaiono:
+
+  * username
+  * link dashboard
+  * link admin per i soli amministratori
+  * logout
+
+**Esito:**
+→ Navigazione pubblica e privata integrate senza duplicare logica lato client
+
+---
+
+### 🔹 Rifinitura UI form di accesso
+
+* Rifatta la sezione auth in `css/layout.css` e `css/style.css`
+* Aggiunte card dedicate per login e registrazione
+* Stabilizzato il layout dei campi con messaggi errore riservati nel flusso
+* Corretto il disallineamento del pulsante nella scheda login
+* Allineati tema, header e spaziature delle nuove pagine auth
+
+**Esito:**
+→ Login e registrazione coerenti, responsive e piu stabili durante la validazione
+
+---
+
+### 🔹 Coerenza tema e componenti
+
+* Aggiornati `js/theme-init.js` e `js/theme-toggle.js`
+* Estesi `css/components.css` e `css/style.css` per rendere coerenti:
+
+  * viewer
+  * card
+  * pulsanti
+  * pannelli auth
+* Mantenuto cache busting con `filemtime()` nelle nuove pagine
+
+**Esito:**
+→ Interfaccia piu uniforme tra homepage, viewer e aree di autenticazione

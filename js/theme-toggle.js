@@ -1,6 +1,6 @@
 (function () {
-    var themeButton = document.getElementById('theme-toggle');
-    var brandLogo = document.getElementById('brand-logo');
+    let themeButton = document.getElementById('theme-toggle');
+    let brandLogo = document.getElementById('brand-logo');
 
     if (!themeButton) {
         return;
@@ -19,7 +19,7 @@
     }
 
     function updateButton(theme) {
-        var isDark = theme === 'dark';
+        let isDark = theme === 'dark';
 
         themeButton.setAttribute('aria-pressed', isDark ? 'true' : 'false');
         themeButton.textContent = isDark ? 'Tema chiaro' : 'Tema scuro';
@@ -49,7 +49,7 @@
     updateLogo(getCurrentTheme());
 
     themeButton.addEventListener('click', function () {
-        var nextTheme = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+        let nextTheme = getCurrentTheme() === 'dark' ? 'light' : 'dark';
         applyTheme(nextTheme);
     });
 }());

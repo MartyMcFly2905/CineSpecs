@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require __DIR__ . '/php/config.php';
 
 $filmId = filter_input(INPUT_GET, 'film', FILTER_VALIDATE_INT, [
@@ -9,6 +11,8 @@ $film = null;
 $frames = [];
 $dbError = false;
 $message = '';
+$isLoggedIn = isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo']);
+$sessionUsername = $isLoggedIn ? htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8') : '';
 
 if (!$filmId) {
     $message = 'Parametro film non valido.';
@@ -76,6 +80,24 @@ if ($film && !$dbError && !$mainFrame) {
         </a>
         <div class="header-actions">
             <p class="header-meta">Frame viewer</p>
+            <div class="header-auth">
+                <?php if ($isLoggedIn): ?>
+                    <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
+                    <a href="dashboard.php">Dashboard</a>
+                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                        <a href="admin.php">Admin</a>
+                    <?php endif; ?>
+                    <a href="logout.php">Logout</a>
+                <?php else: ?>
+                    <details class="auth-menu">
+                        <summary class="theme-toggle">Login</summary>
+                        <div class="auth-menu-panel">
+                            <a href="login.php">Accedi</a>
+                            <a href="register.php">Registrati</a>
+                        </div>
+                    </details>
+                <?php endif; ?>
+            </div>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
         </div>
     </div>
