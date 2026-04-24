@@ -11,6 +11,7 @@ Archivio digitale interattivo di hardware cinematografico usato come oggetto di 
 - Mostrare tag cliccabili sopra i frame.
 - Aprire sidebar con dettagli hardware e curiosità.
 - Consentire a utenti autenticati di aggiungere tag.
+- Tracciare autore e punteggio dei contributi.
 - Gestire ruoli base: ospite, contributor e admin.
 
 ## Priorità

@@ -9,7 +9,9 @@ Gestisce soprattutto:
 * header e navigazione utente;
 * form della homepage;
 * card film;
+* righe di credito contenutistiche;
 * layout delle pagine auth;
+* layout della dashboard contributor;
 * stati responsive principali.
 
 ## Header e navigazione
@@ -50,6 +52,8 @@ grid-template-columns: 1.4fr 1fr auto;
 
 La griglia del catalogo usa `repeat(auto-fill, minmax(...))`, cosi il numero di card si adatta alla larghezza disponibile.
 
+Le card film mostrano anche una riga di credito sotto il titolo, utile per far vedere autore e data di inserimento senza appesantire la UI.
+
 ## Pagine auth
 
 Le pagine `login.php` e `register.php` usano:
@@ -69,6 +73,25 @@ L'obiettivo e separare bene:
 * colonna testuale;
 * card del form;
 * messaggio finale dell'operazione.
+
+## Dashboard contributor
+
+La dashboard usa:
+
+* `.dashboard-hero`
+* `.dashboard-stats`
+* `.dashboard-switcher`
+* `.dashboard-panels`
+* `.contributor-form`
+
+I pulsanti tondi della switcher mostrano un solo pannello per volta.
+
+I form restano semplici ma piu ariosi:
+
+* griglia a due colonne su desktop;
+* campi full-width dove serve;
+* textarea e input file stilizzati come gli altri controlli;
+* passaggio a colonna singola sotto `900px`.
 
 ## Responsive
 

@@ -50,10 +50,14 @@ La query principale recupera:
 * `anno_uscita`
 * `regista`
 * `copertina_path`
+* `creato_il`
+* username dell'autore del film
 
 Il filtro titolo usa `LIKE`, mentre l'anno viene validato con `FILTER_VALIDATE_INT`.
 
 Tutti i valori mostrati nell'HTML vengono escapati con `htmlspecialchars`.
+
+Ogni card del catalogo mostra anche una riga di credito con autore e data di inserimento del film.
 
 ## Tema
 

@@ -21,9 +21,13 @@ Gli elementi principali sono:
 * `#frame-image`
 * `#tag-layer`
 * `#sidebar-content`
+* `#sidebar-meta`
+* `#sidebar-title`
+* `#sidebar-votes`
 * `.timeline-list`
 * `#frame-timestamp`
 * `#frame-description`
+* `#frame-author`
 
 Se mancano elementi fondamentali, il codice si ferma e scrive un errore in console.
 
@@ -57,11 +61,16 @@ Le coordinate percentuali permettono ai tag di restare corretti anche se l'immag
 
 Al click su un tag, `mostraDettagliHardware()` svuota la sidebar e inserisce:
 
-* modello;
 * produttore;
 * anno;
 * descrizione;
 * curiosita.
+
+In parallelo aggiorna l'header della sidebar con:
+
+* nome del prop in `#sidebar-title`;
+* autore e data del tag in `#sidebar-meta`;
+* due badge distinti in `#sidebar-votes` per upvote e downvote.
 
 Il testo viene inserito con `textContent` e `createTextNode`, non con HTML libero. Questo riduce il rischio di inserire markup non controllato.
 
@@ -73,7 +82,7 @@ Al click su una miniatura:
 
 1. cambia immagine principale;
 2. aggiorna `data-frame-id`;
-3. aggiorna timestamp e descrizione;
+3. aggiorna descrizione, timestamp e autore del frame;
 4. sposta la classe `.timeline-item--active`;
 5. ricarica i tag del nuovo frame.
 

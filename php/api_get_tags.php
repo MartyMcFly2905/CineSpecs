@@ -43,6 +43,11 @@ try {
             t.id_tag,
             t.coord_x,
             t.coord_y,
+            t.creato_il,
+            u.id_utente,
+            u.username AS autore_tag,
+            COALESCE(SUM(tv.upvote), 0) AS upvotes,
+            COALESCE(SUM(tv.downvote), 0) AS downvotes,
             h.id_hardware,
             h.nome_modello,
             h.produttore,
@@ -51,7 +56,22 @@ try {
             h.curiosita
          FROM TAGS t
          INNER JOIN HARDWARE h ON t.id_hardware = h.id_hardware
+         INNER JOIN UTENTI u ON t.id_utente = u.id_utente
+         LEFT JOIN TAG_VOTI tv ON tv.id_tag = t.id_tag
          WHERE t.id_frame = ?
+         GROUP BY
+            t.id_tag,
+            t.coord_x,
+            t.coord_y,
+            t.creato_il,
+            u.id_utente,
+            u.username,
+            h.id_hardware,
+            h.nome_modello,
+            h.produttore,
+            h.anno_rilascio,
+            h.descrizione,
+            h.curiosita
          ORDER BY t.id_tag ASC'
     );
     $stmt->execute([$idFrame]);
@@ -64,6 +84,13 @@ try {
             'id_tag' => (int) $row['id_tag'],
             'coord_x' => (float) $row['coord_x'],
             'coord_y' => (float) $row['coord_y'],
+            'creato_il' => $row['creato_il'],
+            'upvotes' => (int) $row['upvotes'],
+            'downvotes' => (int) $row['downvotes'],
+            'autore' => [
+                'id' => (int) $row['id_utente'],
+                'username' => $row['autore_tag'],
+            ],
             'hardware' => [
                 'id' => (int) $row['id_hardware'],
                 'nome_modello' => $row['nome_modello'],

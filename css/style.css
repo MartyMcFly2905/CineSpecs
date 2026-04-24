@@ -159,7 +159,8 @@ body .search-panel form {
 }
 
 body .field-group input,
-body .field-group select {
+body .field-group select,
+body .field-group textarea {
     background-color: var(--color-field-bg);
     border-color: var(--color-border);
     color: var(--color-text);

@@ -46,10 +46,18 @@ La parte centrale contiene:
 * immagine principale;
 * `data-frame-id` per i tag;
 * contenitore `#tag-layer`;
-* didascalia con timestamp e descrizione;
-* sidebar hardware.
+* descrizione del frame in alto nella scheda;
+* riga metadati in basso con timestamp a sinistra e autore del frame a destra;
+* sidebar laterale con titolo del prop, metadati del tag e voti separati.
 
 Sotto compare la timeline dei frame, dove ogni elemento ha attributi `data-*` usati da `js/viewer.js`.
+
+La sidebar hardware contiene:
+
+* nome del prop in alto a sinistra;
+* metadati del tag subito sotto;
+* upvote e downvote impilati in alto a destra;
+* dettagli testuali del componente sotto l'header della sidebar.
 
 ## Sicurezza
 

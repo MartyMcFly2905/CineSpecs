@@ -21,8 +21,10 @@
 - HARDWARE
 - FRAME
 - TAGS
+- TAG_VOTI
 
 ## Convenzioni
 - Un endpoint PHP per responsabilità principale
 - Nomi file chiari e prevedibili
 - Niente architetture enterprise
+- Ogni contenuto creato da contributor deve conservare id autore e timestamp

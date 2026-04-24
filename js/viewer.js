@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const frameImage = document.getElementById('frame-image');
     const tagLayer = document.getElementById('tag-layer');
     const sidebarContent = document.getElementById('sidebar-content');
+    const sidebarMeta = document.getElementById('sidebar-meta');
+    const sidebarTitle = document.getElementById('sidebar-title');
+    const sidebarVotes = document.getElementById('sidebar-votes');
     const timelineList = document.querySelector('.timeline-list');
     const frameTimestamp = document.getElementById('frame-timestamp');
     const frameDescription = document.getElementById('frame-description');
+    const frameAuthor = document.getElementById('frame-author');
 
-    if (!frameImage || !tagLayer || !sidebarContent) {
+    if (!frameImage || !tagLayer || !sidebarContent || !sidebarMeta || !sidebarTitle || !sidebarVotes) {
         console.error('Elementi del viewer non trovati.');
         return;
     }
@@ -19,14 +23,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    caricaTag(frameId, tagLayer, sidebarContent);
+    caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
 
-    if (timelineList && frameTimestamp && frameDescription) {
-        preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, frameTimestamp, frameDescription);
+    if (timelineList && frameTimestamp && frameDescription && frameAuthor) {
+        preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
     }
 });
 
-function caricaTag(frameId, tagLayer, sidebarContent) {
+function caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     fetch('php/api_get_tags.php?id_frame=' + encodeURIComponent(frameId))
         .then(function (response) {
             if (!response.ok) {
@@ -40,16 +44,19 @@ function caricaTag(frameId, tagLayer, sidebarContent) {
                 throw new Error(result.message || 'Errore nel caricamento dei tag.');
             }
 
-            disegnaTag(result.data, tagLayer, sidebarContent);
+            disegnaTag(result.data, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
         })
         .catch(function (error) {
             console.error(error);
             svuotaElemento(tagLayer);
+            resetSidebarMeta(sidebarMeta);
+            resetSidebarTitle(sidebarTitle);
+            aggiornaSidebarVotes(sidebarVotes, 0, 0);
             mostraMessaggioSidebar('Impossibile caricare i tag del frame.');
         });
 }
 
-function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, frameTimestamp, frameDescription) {
+function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor) {
     timelineList.addEventListener('click', function (event) {
         const timelineItem = event.target.closest('.timeline-item');
 
@@ -57,7 +64,7 @@ function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, fra
             return;
         }
 
-        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, frameTimestamp, frameDescription);
+        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
     });
 
     timelineList.addEventListener('keydown', function (event) {
@@ -72,11 +79,11 @@ function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, fra
         }
 
         event.preventDefault();
-        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, frameTimestamp, frameDescription);
+        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
     });
 }
 
-function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, frameTimestamp, frameDescription) {
+function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor) {
     const frameId = timelineItem.dataset.frameId;
     const frameSrc = timelineItem.dataset.frameSrc;
 
@@ -90,11 +97,15 @@ function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, frameTi
     frameImage.dataset.frameId = frameId;
     frameTimestamp.textContent = timelineItem.dataset.frameTimestamp || 'Timestamp non disponibile';
     frameDescription.textContent = timelineItem.dataset.frameDescription || '';
+    frameAuthor.textContent = timelineItem.dataset.frameAuthor || 'Aggiunto da: utente non disponibile';
 
     aggiornaFrameAttivo(timelineItem);
     svuotaElemento(tagLayer);
+    resetSidebarMeta(sidebarMeta);
+    resetSidebarTitle(sidebarTitle);
+    aggiornaSidebarVotes(sidebarVotes, 0, 0);
     mostraMessaggioSidebar('Seleziona un Pulse-Tag per vedere i dettagli hardware.');
-    caricaTag(frameId, tagLayer, sidebarContent);
+    caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
 }
 
 function aggiornaFrameAttivo(timelineItem) {
@@ -107,10 +118,13 @@ function aggiornaFrameAttivo(timelineItem) {
     timelineItem.classList.add('timeline-item--active');
 }
 
-function disegnaTag(tags, tagLayer, sidebarContent) {
+function disegnaTag(tags, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     svuotaElemento(tagLayer);
 
     if (!tags || tags.length === 0) {
+        resetSidebarMeta(sidebarMeta);
+        resetSidebarTitle(sidebarTitle);
+        aggiornaSidebarVotes(sidebarVotes, 0, 0);
         mostraMessaggioSidebar('Nessun hardware taggato in questo frame.');
         return;
     }
@@ -128,7 +142,7 @@ function disegnaTag(tags, tagLayer, sidebarContent) {
         pulseTag.setAttribute('aria-label', 'Mostra dettagli ' + hardware.nome_modello);
 
         pulseTag.addEventListener('click', function () {
-            mostraDettagliHardware(hardware, sidebarContent);
+            mostraDettagliHardware(hardware, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
         });
 
         tagLayer.appendChild(pulseTag);
@@ -145,15 +159,18 @@ function preparaDatiHardware(tag) {
         anno_rilascio: tag.anno_rilascio || hardware.anno_rilascio || '',
         descrizione: tag.descrizione || hardware.descrizione || '',
         curiosita: tag.curiosita || hardware.curiosita || '',
+        upvotes: typeof tag.upvotes === 'number' ? tag.upvotes : 0,
+        downvotes: typeof tag.downvotes === 'number' ? tag.downvotes : 0,
+        autore_username: tag.autore && tag.autore.username ? tag.autore.username : '',
+        creato_il: tag.creato_il || '',
     };
 }
 
-function mostraDettagliHardware(hardware, sidebarContent) {
+function mostraDettagliHardware(hardware, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     svuotaElemento(sidebarContent);
-
-    const title = document.createElement('h3');
-    title.textContent = hardware.nome_modello;
-    sidebarContent.appendChild(title);
+    aggiornaSidebarMeta(sidebarMeta, hardware.autore_username, hardware.creato_il);
+    aggiornaSidebarTitle(sidebarTitle, hardware.nome_modello);
+    aggiornaSidebarVotes(sidebarVotes, hardware.upvotes, hardware.downvotes);
 
     aggiungiDettaglio(sidebarContent, 'Produttore', hardware.produttore);
     aggiungiDettaglio(sidebarContent, 'Anno rilascio', hardware.anno_rilascio);
@@ -162,6 +179,81 @@ function mostraDettagliHardware(hardware, sidebarContent) {
     if (hardware.curiosita) {
         aggiungiDettaglio(sidebarContent, 'Curiosità', hardware.curiosita);
     }
+}
+
+function aggiornaSidebarMeta(sidebarMeta, username, createdAt) {
+    svuotaElemento(sidebarMeta);
+
+    const label = document.createElement('span');
+    label.className = 'hardware-sidebar-meta__label';
+    label.textContent = username ? 'Tag di ' + username : 'Autore non disponibile';
+    sidebarMeta.appendChild(label);
+
+    const dateText = formatDate(createdAt);
+
+    if (dateText) {
+        const date = document.createElement('span');
+        date.className = 'hardware-sidebar-meta__date';
+        date.textContent = dateText;
+        sidebarMeta.appendChild(date);
+    }
+}
+
+function resetSidebarMeta(sidebarMeta) {
+    svuotaElemento(sidebarMeta);
+
+    const label = document.createElement('span');
+    label.className = 'hardware-sidebar-meta__label';
+    label.textContent = 'Seleziona un tag';
+    sidebarMeta.appendChild(label);
+}
+
+function aggiornaSidebarTitle(sidebarTitle, value) {
+    sidebarTitle.textContent = value || 'Prop';
+}
+
+function resetSidebarTitle(sidebarTitle) {
+    sidebarTitle.textContent = 'Prop';
+}
+
+function aggiornaSidebarVotes(sidebarVotes, upvotes, downvotes) {
+    svuotaElemento(sidebarVotes);
+    sidebarVotes.appendChild(creaVoteBadge('up', upvotes));
+    sidebarVotes.appendChild(creaVoteBadge('down', downvotes));
+}
+
+function formatDate(value) {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value.replace(' ', 'T'));
+
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return date.toLocaleDateString('it-IT');
+}
+
+function creaVoteBadge(type, value) {
+    const badge = document.createElement('span');
+    const icon = document.createElement('span');
+    const count = document.createElement('span');
+
+    badge.className = 'hardware-vote-badge hardware-vote-badge--' + type;
+    badge.setAttribute('aria-label', (type === 'up' ? 'Upvote: ' : 'Downvote: ') + value);
+    icon.className = 'hardware-vote-badge__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = type === 'up' ? '▲' : '▼';
+
+    count.className = 'hardware-vote-badge__count';
+    count.textContent = String(value);
+
+    badge.appendChild(icon);
+    badge.appendChild(count);
+
+    return badge;
 }
 
 function aggiungiDettaglio(container, label, value) {

@@ -8,6 +8,7 @@ Le aree principali sono:
 
 * header contenutistico del viewer;
 * frame principale;
+* didascalia del frame con descrizione e metadati;
 * Pulse-Tag;
 * sidebar hardware;
 * timeline dei frame.
@@ -45,6 +46,9 @@ Le animazioni vere e proprie arrivano da `animations.css`, importato in testa al
 La sidebar usa uno stile piu tecnico:
 
 * font terminale;
+* nome del prop in alto a sinistra;
+* metadati del tag sotto il titolo;
+* badge voto impilati in alto a destra;
 * testi in pannelli separati;
 * accento cromatico coerente con il tema.
 
@@ -56,7 +60,8 @@ La timeline usa card cliccabili con:
 
 * miniatura;
 * titolo del frame;
-* timestamp.
+* timestamp;
+* autore del frame.
 
 Lo stato `.timeline-item--active` evidenzia il frame attualmente mostrato sopra.
 

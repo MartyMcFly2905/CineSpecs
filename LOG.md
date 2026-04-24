@@ -258,6 +258,120 @@ Test eseguiti su XAMPP:
 
 ### 🔹 Autenticazione base e pagine riservate
 
+* Implementati login, registrazione, dashboard e pagina admin con controllo sessione
+* Aggiunta validazione client minima in `js/validation.js`
+* Collegati header pubblici e privati con stato utente coerente
+
+**Esito:**
+→ Base autenticazione pronta per distinguere ospiti, contributor e admin
+
+---
+
+## Fase 4
+
+### 🔹 Viewer rifinito
+
+* Rimossa la data di aggiunta del film dalla testata del viewer
+* Semplificata la riga metadati del frame:
+
+  * timestamp a sinistra
+  * pillola autore a destra
+
+* Rimossa la dicitura "Ordine per timestamp" dalla timeline
+
+**Esito:**
+→ Viewer piu pulito e focalizzato sui dati utili del frame
+
+---
+
+### 🔹 Voti separati sui tag
+
+* Aggiornato `TAG_VOTI` da modello con `valore` unico a modello esplicito con:
+
+  * `upvote`
+  * `downvote`
+
+* Aggiornato `setup_database.sql`
+* Migrato anche il database locale attivo
+* Aggiornato `php/api_get_tags.php` per restituire i due contatori separati
+* Aggiornata la sidebar del viewer con:
+
+  * triangolino verde verso l'alto
+  * triangolino rosso verso il basso
+  * contatore visibile per ciascun voto
+
+**Esito:**
+→ Sistema voti piu chiaro e coerente tra database, API e interfaccia
+
+---
+
+### 🔹 Sidebar viewer riorganizzata
+
+* Rimosso il titolo fisso "Hardware"
+* Spostato il nome del prop in alto a sinistra nella sidebar
+* Mantenuti sotto il titolo autore e data del tag
+* Fissati i due badge voto impilati in alto a destra
+
+**Esito:**
+→ Sidebar piu ordinata e piu vicina al linguaggio del progetto
+
+---
+
+### 🔹 Dashboard contributor reale
+
+* Trasformata `dashboard.php` in area contributor con inserimento:
+
+  * film
+  * frame
+
+* Implementati controlli server-side:
+
+  * sessione valida
+  * film duplicati
+  * film esistente per i frame
+  * timestamp valido
+  * upload immagini con controlli su tipo e dimensione
+
+* Aggiunti form piu puliti e spazio dedicato a feedback e statistiche
+* Aggiunti pulsanti tondi per scegliere il contenuto da inserire
+* Resa visibile una sola scheda di inserimento per volta
+
+**Esito:**
+→ Dashboard ora utile davvero per il flusso contributor, ma ancora semplice e spiegabile
+
+---
+
+### 🔹 Rimozione inserimento prop dalla dashboard
+
+* Rimossa dalla dashboard tutta la parte di inserimento prop/hardware
+* Rimossi:
+
+  * bottone dedicato
+  * form dedicato
+  * validazione JS associata
+  * riferimenti documentali non piu coerenti
+  * cartella `assets/hardware`
+
+* Decisione progettuale:
+  i prop verranno aggiunti piu avanti tramite editor sul frame, non con un form separato in dashboard
+
+**Esito:**
+→ Dashboard riallineata al flusso reale del progetto
+
+---
+
+### 🔹 Fix upload immagini dashboard
+
+* Individuato problema di permessi sulle cartelle upload usate da Apache/XAMPP
+* Verificato che Apache gira come gruppo `daemon`
+* Sistemati i permessi sulle cartelle:
+
+  * `assets/covers`
+  * `assets/frames`
+
+**Esito:**
+→ Upload coerente con l'ambiente XAMPP locale
+
 * Creati `login.php`, `register.php` e `logout.php`
 * Implementato `php/auth.php` come endpoint unico JSON per:
 
@@ -315,3 +429,90 @@ Test eseguiti su XAMPP:
 
 **Esito:**
 → Interfaccia piu uniforme tra homepage, viewer e aree di autenticazione
+
+---
+
+### 🔹 Tracciamento autori e voti nei contenuti
+
+* Aggiornato `setup_database.sql`
+* Aggiunti:
+
+  * `id_utente_creatore` e `creato_il` su `FILM`
+  * `id_utente_creatore` e `creato_il` su `FRAME`
+  * `id_utente_creatore` e `creato_il` su `HARDWARE`
+  * tabella `TAG_VOTI`
+
+* Reimportato il database locale con il nuovo schema
+* Aggiornato il seed con autori e voti di esempio
+
+**Esito:**
+→ Base dati pronta per dashboard contributor, punteggi e moderazione admin
+
+---
+
+### 🔹 Crediti contenutistici nel catalogo e nel viewer
+
+* Aggiornato `index.php`
+* Ogni card film ora mostra:
+
+  * autore del film
+  * data di inserimento
+
+* Aggiornato `frame_viewer.php`
+* Il viewer ora mostra:
+
+  * autore e data del film nella testata
+  * descrizione frame in alto nella scheda
+  * timestamp in basso a sinistra
+  * autore del frame in basso a destra
+  * autore del frame anche nella timeline
+
+**Esito:**
+→ I contenuti risultano piu leggibili e meglio attribuiti ai contributor
+
+---
+
+### 🔹 Sidebar hardware piu coerente
+
+* Aggiornato `php/api_get_tags.php`
+* L'endpoint ora restituisce anche:
+
+  * autore del tag
+  * data di inserimento
+  * punteggio netto
+
+* Aggiornato `js/viewer.js`
+* Al click su un tag la sidebar mostra:
+
+  * nome hardware
+  * punteggio accanto al nome
+  * autore del tag in alto a destra
+  * data sotto l'autore
+  * dettagli hardware in pannelli coerenti
+
+* Rifiniti `css/components.css` e `css/layout.css`
+
+**Esito:**
+→ Sidebar e viewer piu ordinati, coerenti e vicini al tono finale del progetto
+
+---
+
+### 🔹 Allineamento documentazione tecnica
+
+* Aggiornati i file in `docs/descrizioni` collegati a:
+
+  * `index.php`
+  * `frame_viewer.php`
+  * `php/api_get_tags.php`
+  * `js/viewer.js`
+  * `css/layout.css`
+  * `css/components.css`
+
+* Allineati anche i documenti generali su:
+
+  * struttura database
+  * contratti API
+  * roadmap personale
+
+**Esito:**
+→ Documentazione coerente con lo stato reale del progetto e pronta per proseguire con la dashboard

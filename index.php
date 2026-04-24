@@ -15,7 +15,16 @@ try {
     $yearStmt = $pdo->query('SELECT DISTINCT anno_uscita FROM FILM WHERE anno_uscita IS NOT NULL ORDER BY anno_uscita DESC');
     $availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-    $query = 'SELECT id_film, titolo, anno_uscita, regista, copertina_path FROM FILM';
+    $query = 'SELECT
+                f.id_film,
+                f.titolo,
+                f.anno_uscita,
+                f.regista,
+                f.copertina_path,
+                f.creato_il,
+                u.username AS autore_film
+              FROM FILM f
+              INNER JOIN UTENTI u ON f.id_utente_creatore = u.id_utente';
     $conditions = [];
     $params = [];
 
@@ -168,6 +177,12 @@ try {
                                     </figure>
                                     <div class="film-card-body">
                                         <h3><?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                        <p class="content-credit">
+                                            Aggiunto da <?php echo htmlspecialchars($film['autore_film'], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php if (!empty($film['creato_il'])): ?>
+                                                · <?php echo htmlspecialchars(date('d/m/Y', strtotime($film['creato_il'])), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php endif; ?>
+                                        </p>
                                         <div class="film-meta">
                                             <span>
                                                 <?php echo $film['anno_uscita'] ? (int) $film['anno_uscita'] : 'Anno n/d'; ?>
