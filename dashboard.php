@@ -307,6 +307,7 @@ $filmsForSelect = [];
 $stats = [
     'film' => 0,
     'frame' => 0,
+    'hardware' => 0,
 ];
 
 try {
@@ -320,6 +321,7 @@ try {
     $statsQueries = [
         'film' => 'SELECT COUNT(*) FROM FILM WHERE id_utente_creatore = ?',
         'frame' => 'SELECT COUNT(*) FROM FRAME WHERE id_utente_creatore = ?',
+        'hardware' => 'SELECT COUNT(*) FROM HARDWARE WHERE id_utente_creatore = ?',
     ];
 
     foreach ($statsQueries as $key => $query) {
@@ -364,10 +366,12 @@ try {
             <p class="header-meta">Area contributor</p>
             <div class="header-auth">
                 <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
-                <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                    <a href="admin.php">Admin</a>
-                <?php endif; ?>
-                <a href="logout.php">Logout</a>
+                <nav class="header-auth-pill" aria-label="Azioni account">
+                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                        <a href="admin.php">Admin</a>
+                    <?php endif; ?>
+                    <a href="logout.php">Logout</a>
+                </nav>
             </div>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
         </div>
@@ -380,7 +384,7 @@ try {
             <div class="grid-heading">
                 <h1 id="dashboard-title">Dashboard contributor</h1>
             </div>
-            <p class="dashboard-note">I tag sui frame verranno gestiti in una fase successiva. Qui puoi preparare il catalogo con i contenuti base.</p>
+            <p class="dashboard-note">Qui puoi preparare il catalogo con film e frame. I tag e i prop si aggiungono dal frame viewer in modalita ispezione.</p>
         </section>
 
         <section class="dashboard-stats" aria-label="Statistiche contributi">
@@ -391,6 +395,10 @@ try {
             <article class="dashboard-stat">
                 <span class="dashboard-stat__label">Frame caricati</span>
                 <strong class="dashboard-stat__value"><?php echo $stats['frame']; ?></strong>
+            </article>
+            <article class="dashboard-stat">
+                <span class="dashboard-stat__label">Prop aggiunti</span>
+                <strong class="dashboard-stat__value"><?php echo $stats['hardware']; ?></strong>
             </article>
         </section>
 

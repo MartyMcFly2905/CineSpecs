@@ -124,8 +124,9 @@ CREATE TABLE TAG_VOTI (
 ) ENGINE=InnoDB;
 
 INSERT INTO UTENTI (username, email, password_hash, ruolo) VALUES
-('admin', 'admin@cinespecs.local', '$2y$10$wH0N3xQeJ8mP4Q0xM1yRne9L7kJQ2m8f2n4jJc7sJb3rR8A1VtL8O', 'admin'),
-('marta', 'marta@cinespecs.local', '$2y$10$wH0N3xQeJ8mP4Q0xM1yRne9L7kJQ2m8f2n4jJc7sJb3rR8A1VtL8O', 'contributor');
+('admin', 'admin@cinespecs.local', '$2y$12$J7rMGw5Yq45TlX30pWqVVOIFIGsFCys2Xz2989Yljk0axFxxdPIkG', 'admin'),
+('marta', 'marta@cinespecs.local', '$2y$12$J7rMGw5Yq45TlX30pWqVVOIFIGsFCys2Xz2989Yljk0axFxxdPIkG', 'contributor'),
+('christian', 'Christian@cinespecs.local', '$2y$12$J7rMGw5Yq45TlX30pWqVVOIFIGsFCys2Xz2989Yljk0axFxxdPIkG', 'contributor');
 
 INSERT INTO FILM (id_utente_creatore, titolo, anno_uscita, regista, sinossi, copertina_path) VALUES
 (1, 'Alien', 1979, 'Ridley Scott', 'L''equipaggio della Nostromo affronta una minaccia aliena.', 'assets/covers/alien.jpg'),

@@ -95,11 +95,13 @@ try {
             <div class="header-auth">
                 <?php if ($isLoggedIn): ?>
                     <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
-                    <a href="dashboard.php">Dashboard</a>
-                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                        <a href="admin.php">Admin</a>
-                    <?php endif; ?>
-                    <a href="logout.php">Logout</a>
+                    <nav class="header-auth-pill" aria-label="Azioni account">
+                        <a href="dashboard.php">Dashboard</a>
+                        <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                            <a href="admin.php">Admin</a>
+                        <?php endif; ?>
+                        <a href="logout.php">Logout</a>
+                    </nav>
                 <?php else: ?>
                     <details class="auth-menu">
                         <summary class="theme-toggle">Login</summary>

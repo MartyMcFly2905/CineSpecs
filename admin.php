@@ -41,8 +41,10 @@ $sessionUsername = htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
             <p class="header-meta">Area admin</p>
             <div class="header-auth">
                 <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="logout.php">Logout</a>
+                <nav class="header-auth-pill" aria-label="Azioni account">
+                    <a href="dashboard.php">Dashboard</a>
+                    <a href="logout.php">Logout</a>
+                </nav>
             </div>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
         </div>
