@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-require __DIR__ . '/php/config.php';
+require __DIR__ . '/config.php';
 
 $filmId = filter_input(INPUT_GET, 'film', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
@@ -9,6 +9,7 @@ $filmId = filter_input(INPUT_GET, 'film', FILTER_VALIDATE_INT, [
 
 $film = null;
 $frames = [];
+$hardwareOptions = [];
 $dbError = false;
 $message = '';
 $isLoggedIn = isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo']);
@@ -41,14 +42,33 @@ if (!$filmId) {
                     fr.timestamp_frame,
                     fr.descrizione_scena,
                     fr.creato_il,
-                    u.username AS autore_frame
+                    u.username AS autore_frame,
+                    COALESCE(SUM(fv.upvote), 0) AS frame_upvotes,
+                    COALESCE(SUM(fv.downvote), 0) AS frame_downvotes
                  FROM FRAME fr
                  INNER JOIN UTENTI u ON fr.id_utente_creatore = u.id_utente
+                 LEFT JOIN FRAME_VOTI fv ON fv.id_frame = fr.id_frame
                  WHERE fr.id_film = ?
+                 GROUP BY
+                    fr.id_frame,
+                    fr.immagine_path,
+                    fr.timestamp_frame,
+                    fr.descrizione_scena,
+                    fr.creato_il,
+                    u.username
                  ORDER BY fr.timestamp_frame IS NULL, fr.timestamp_frame ASC, fr.id_frame ASC'
             );
             $frameStmt->execute([$filmId]);
             $frames = $frameStmt->fetchAll();
+
+            if ($isLoggedIn) {
+                $hardwareStmt = $pdo->query(
+                    'SELECT id_hardware, nome_modello, produttore
+                     FROM HARDWARE
+                     ORDER BY produttore ASC, nome_modello ASC'
+                );
+                $hardwareOptions = $hardwareStmt->fetchAll();
+            }
         } else {
             $message = 'Film non trovato.';
         }
@@ -77,22 +97,22 @@ if ($film && !$dbError && !$mainFrame) {
             Frame viewer · CineSpecs
         <?php endif; ?>
     </title>
-    <script src="js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/js/theme-init.js'); ?>"></script>
-    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
-    <link rel="stylesheet" href="css/layout.css?v=<?php echo filemtime(__DIR__ . '/css/layout.css'); ?>">
-    <link rel="stylesheet" href="css/components.css?v=<?php echo filemtime(__DIR__ . '/css/components.css'); ?>">
+    <script src="../js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-init.js'); ?>"></script>
+    <link rel="stylesheet" href="../css/style.css?v=<?php echo filemtime(__DIR__ . '/../css/style.css'); ?>">
+    <link rel="stylesheet" href="../css/layout.css?v=<?php echo filemtime(__DIR__ . '/../css/layout.css'); ?>">
+    <link rel="stylesheet" href="../css/components.css?v=<?php echo filemtime(__DIR__ . '/../css/components.css'); ?>">
 </head>
 <body class="viewer-page">
 <header class="site-header">
     <div class="container header-inner">
-        <a href="index.php" class="brand">
+        <a href="../index.php" class="brand">
             <img
-                src="assets/icons/logo.png"
+                src="../assets/icons/logo.png"
                 alt="CineSpecs"
                 class="brand-logo"
                 id="brand-logo"
-                data-light-logo="assets/icons/logo_dark.png"
-                data-dark-logo="assets/icons/logo.png"
+                data-light-logo="../assets/icons/logo_dark.png"
+                data-dark-logo="../assets/icons/logo.png"
             >
             <span class="visually-hidden">CineSpecs</span>
         </a>
@@ -101,11 +121,13 @@ if ($film && !$dbError && !$mainFrame) {
             <div class="header-auth">
                 <?php if ($isLoggedIn): ?>
                     <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
-                    <a href="dashboard.php">Dashboard</a>
-                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                        <a href="admin.php">Admin</a>
-                    <?php endif; ?>
-                    <a href="logout.php">Logout</a>
+                    <nav class="header-auth-pill" aria-label="Azioni account">
+                        <a href="dashboard.php">Dashboard</a>
+                        <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                            <a href="admin.php">Admin</a>
+                        <?php endif; ?>
+                        <a href="logout.php">Logout</a>
+                    </nav>
                 <?php else: ?>
                     <details class="auth-menu">
                         <summary class="theme-toggle">Login</summary>
@@ -124,7 +146,7 @@ if ($film && !$dbError && !$mainFrame) {
 <main>
     <div class="container">
         <p class="viewer-back-link">
-            <a href="index.php">Torna al catalogo</a>
+            <a href="../index.php">Torna al catalogo</a>
         </p>
 
         <?php if ($message): ?>
@@ -141,7 +163,19 @@ if ($film && !$dbError && !$mainFrame) {
                         <?php echo htmlspecialchars($film['regista'], ENT_QUOTES, 'UTF-8'); ?>
                     </p>
                 </div>
-                <p><?php echo count($frames); ?> frame disponibili</p>
+                <div class="viewer-actions">
+                    <p><?php echo count($frames); ?> frame disponibili</p>
+                    <?php if ($isLoggedIn): ?>
+                        <button
+                            type="button"
+                            id="inspection-toggle"
+                            class="inspection-toggle"
+                            aria-pressed="false"
+                        >
+                            Aggiungi tag
+                        </button>
+                    <?php endif; ?>
+                </div>
             </section>
 
             <section class="viewer-layout" aria-label="Viewer frame">
@@ -150,7 +184,7 @@ if ($film && !$dbError && !$mainFrame) {
                         <div class="frame-tag-layer">
                             <img
                                 id="frame-image"
-                                src="<?php echo htmlspecialchars($mainFrame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
+                                src="<?php echo htmlspecialchars('../' . $mainFrame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
                                 alt="Frame di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
                                 data-frame-id="<?php echo (int) $mainFrame['id_frame']; ?>"
                             >
@@ -167,6 +201,26 @@ if ($film && !$dbError && !$mainFrame) {
                                 <span id="frame-author" class="frame-meta-pill frame-meta-pill--author">
                                     Aggiunto da: <?php echo htmlspecialchars($mainFrame['autore_frame'], ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
+                                <span
+                                    id="frame-votes"
+                                    class="vote-controls"
+                                    data-frame-id="<?php echo (int) $mainFrame['id_frame']; ?>"
+                                    data-frame-upvotes="<?php echo (int) $mainFrame['frame_upvotes']; ?>"
+                                    data-frame-downvotes="<?php echo (int) $mainFrame['frame_downvotes']; ?>"
+                                    data-vote-target="frame"
+                                    data-vote-id="<?php echo (int) $mainFrame['id_frame']; ?>"
+                                    data-can-vote="<?php echo $isLoggedIn ? '1' : '0'; ?>"
+                                    aria-label="Voti del frame"
+                                >
+                                    <button type="button" class="vote-button vote-button--up" data-vote="up" <?php echo $isLoggedIn ? '' : 'disabled'; ?>>
+                                        <span aria-hidden="true">▲</span>
+                                        <span class="vote-button__count" data-vote-count="up"><?php echo (int) $mainFrame['frame_upvotes']; ?></span>
+                                    </button>
+                                    <button type="button" class="vote-button vote-button--down" data-vote="down" <?php echo $isLoggedIn ? '' : 'disabled'; ?>>
+                                        <span aria-hidden="true">▼</span>
+                                        <span class="vote-button__count" data-vote-count="down"><?php echo (int) $mainFrame['frame_downvotes']; ?></span>
+                                    </button>
+                                </span>
                             </div>
                         </figcaption>
                     </figure>
@@ -180,15 +234,22 @@ if ($film && !$dbError && !$mainFrame) {
                                 <span class="hardware-sidebar-meta__label">Seleziona un tag</span>
                             </div>
                         </div>
-                        <div class="hardware-sidebar-votes" id="sidebar-votes" aria-label="Voti del tag">
-                            <span class="hardware-vote-badge hardware-vote-badge--up" aria-label="Upvote: 0">
-                                <span class="hardware-vote-badge__icon" aria-hidden="true">▲</span>
-                                <span class="hardware-vote-badge__count">0</span>
-                            </span>
-                            <span class="hardware-vote-badge hardware-vote-badge--down" aria-label="Downvote: 0">
-                                <span class="hardware-vote-badge__icon" aria-hidden="true">▼</span>
-                                <span class="hardware-vote-badge__count">0</span>
-                            </span>
+                        <div
+                            class="hardware-sidebar-votes vote-controls"
+                            id="sidebar-votes"
+                            data-vote-target="tag"
+                            data-vote-id=""
+                            data-can-vote="<?php echo $isLoggedIn ? '1' : '0'; ?>"
+                            aria-label="Voti del tag"
+                        >
+                            <button type="button" class="vote-button vote-button--up" data-vote="up" <?php echo $isLoggedIn ? '' : 'disabled'; ?>>
+                                <span aria-hidden="true">▲</span>
+                                <span class="vote-button__count" data-vote-count="up">0</span>
+                            </button>
+                            <button type="button" class="vote-button vote-button--down" data-vote="down" <?php echo $isLoggedIn ? '' : 'disabled'; ?>>
+                                <span aria-hidden="true">▼</span>
+                                <span class="vote-button__count" data-vote-count="down">0</span>
+                            </button>
                         </div>
                     </div>
                     <div id="sidebar-content">
@@ -197,9 +258,22 @@ if ($film && !$dbError && !$mainFrame) {
                 </aside>
             </section>
 
+            <?php if ($isLoggedIn): ?>
+                <template id="hardware-options-template">
+                    <?php foreach ($hardwareOptions as $hardware): ?>
+                        <option value="<?php echo (int) $hardware['id_hardware']; ?>">
+                            <?php echo htmlspecialchars($hardware['produttore'] . ' · ' . $hardware['nome_modello'], ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </template>
+            <?php endif; ?>
+
             <section class="frame-timeline" aria-labelledby="timeline-title">
                 <div class="grid-heading">
-                    <h2 id="timeline-title">Timeline frame</h2>
+                    <div class="heading-with-action">
+                        <h2 id="timeline-title">Timeline frame</h2>
+                        <a class="heading-add-link" href="dashboard.php?tab=create_frame" aria-label="Aggiungi un frame">+</a>
+                    </div>
                 </div>
 
                 <ol class="timeline-list">
@@ -210,14 +284,16 @@ if ($film && !$dbError && !$mainFrame) {
                                 role="button"
                                 tabindex="0"
                                 data-frame-id="<?php echo (int) $frame['id_frame']; ?>"
-                                data-frame-src="<?php echo htmlspecialchars($frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-frame-src="<?php echo htmlspecialchars('../' . $frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
                                 data-frame-timestamp="<?php echo $frame['timestamp_frame'] ? htmlspecialchars($frame['timestamp_frame'], ENT_QUOTES, 'UTF-8') : 'Timestamp non disponibile'; ?>"
                                 data-frame-description="<?php echo !empty($frame['descrizione_scena']) ? htmlspecialchars($frame['descrizione_scena'], ENT_QUOTES, 'UTF-8') : ''; ?>"
                                 data-frame-author="Aggiunto da: <?php echo htmlspecialchars($frame['autore_frame'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-frame-upvotes="<?php echo (int) $frame['frame_upvotes']; ?>"
+                                data-frame-downvotes="<?php echo (int) $frame['frame_downvotes']; ?>"
                                 data-frame-alt="Frame di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
                             >
                                 <img
-                                    src="<?php echo htmlspecialchars($frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    src="<?php echo htmlspecialchars('../' . $frame['immagine_path'], ENT_QUOTES, 'UTF-8'); ?>"
                                     alt="Miniatura frame <?php echo $index + 1; ?> di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
                                 >
                                 <div>
@@ -238,7 +314,7 @@ if ($film && !$dbError && !$mainFrame) {
     </div>
 </main>
 
-<script src="js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/js/theme-toggle.js'); ?>"></script>
-<script src="js/viewer.js?v=<?php echo filemtime(__DIR__ . '/js/viewer.js'); ?>"></script>
+<script src="../js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-toggle.js'); ?>"></script>
+<script src="../js/viewer.js?v=<?php echo filemtime(__DIR__ . '/../js/viewer.js'); ?>"></script>
 </body>
 </html>

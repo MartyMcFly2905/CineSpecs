@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const frameTimestamp = document.getElementById('frame-timestamp');
     const frameDescription = document.getElementById('frame-description');
     const frameAuthor = document.getElementById('frame-author');
+    const frameVotes = document.getElementById('frame-votes');
+    const inspectionToggle = document.getElementById('inspection-toggle');
 
     if (!frameImage || !tagLayer || !sidebarContent || !sidebarMeta || !sidebarTitle || !sidebarVotes) {
         console.error('Elementi del viewer non trovati.');
@@ -25,13 +27,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
 
+    if (inspectionToggle) {
+        preparaIspezione(inspectionToggle, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+    }
+
+    if (frameVotes) {
+        preparaVotiContenuto(frameVotes, function (id, upvotes, downvotes) {
+            aggiornaTimelineVotiFrame(id, upvotes, downvotes);
+        });
+    }
+
+    preparaVotiContenuto(sidebarVotes);
+
     if (timelineList && frameTimestamp && frameDescription && frameAuthor) {
-        preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
+        preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes);
     }
 });
 
 function caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
-    fetch('php/api_get_tags.php?id_frame=' + encodeURIComponent(frameId))
+    fetch('api_get_tags.php?id_frame=' + encodeURIComponent(frameId))
         .then(function (response) {
             if (!response.ok) {
                 throw new Error('Errore HTTP ' + response.status);
@@ -51,12 +65,12 @@ function caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle,
             svuotaElemento(tagLayer);
             resetSidebarMeta(sidebarMeta);
             resetSidebarTitle(sidebarTitle);
-            aggiornaSidebarVotes(sidebarVotes, 0, 0);
+            aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
             mostraMessaggioSidebar('Impossibile caricare i tag del frame.');
         });
 }
 
-function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor) {
+function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes) {
     timelineList.addEventListener('click', function (event) {
         const timelineItem = event.target.closest('.timeline-item');
 
@@ -64,7 +78,7 @@ function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sid
             return;
         }
 
-        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
+        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes);
     });
 
     timelineList.addEventListener('keydown', function (event) {
@@ -79,11 +93,11 @@ function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sid
         }
 
         event.preventDefault();
-        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor);
+        cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes);
     });
 }
 
-function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor) {
+function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes) {
     const frameId = timelineItem.dataset.frameId;
     const frameSrc = timelineItem.dataset.frameSrc;
 
@@ -99,13 +113,364 @@ function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebar
     frameDescription.textContent = timelineItem.dataset.frameDescription || '';
     frameAuthor.textContent = timelineItem.dataset.frameAuthor || 'Aggiunto da: utente non disponibile';
 
+    if (frameVotes) {
+        aggiornaVotiContenuto(
+            frameVotes,
+            'frame',
+            frameId,
+            Number(timelineItem.dataset.frameUpvotes || 0),
+            Number(timelineItem.dataset.frameDownvotes || 0)
+        );
+    }
+
     aggiornaFrameAttivo(timelineItem);
     svuotaElemento(tagLayer);
     resetSidebarMeta(sidebarMeta);
     resetSidebarTitle(sidebarTitle);
-    aggiornaSidebarVotes(sidebarVotes, 0, 0);
+    aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
     mostraMessaggioSidebar('Seleziona un Pulse-Tag per vedere i dettagli hardware.');
     caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+}
+
+function preparaVotiContenuto(container, afterUpdate) {
+    container.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-vote]');
+
+        if (!button || button.disabled) {
+            return;
+        }
+
+        const targetType = container.dataset.voteTarget;
+        const targetId = container.dataset.voteId;
+        const vote = button.dataset.vote;
+        const formData = new FormData();
+
+        if (!targetType || !targetId || !/^[1-9][0-9]*$/.test(targetId)) {
+            return;
+        }
+
+        formData.append('target_type', targetType);
+        formData.append(targetType === 'frame' ? 'id_frame' : 'id_tag', targetId);
+        formData.append('vote', vote);
+        button.disabled = true;
+
+        fetch('api_vote.php', {
+            method: 'POST',
+            body: formData,
+        })
+            .then(function (response) {
+                return response.json().then(function (result) {
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Errore durante il voto.');
+                    }
+
+                    return result;
+                });
+            })
+            .then(function (result) {
+                aggiornaVotiContenuto(container, targetType, targetId, result.data.upvotes, result.data.downvotes);
+
+                if (afterUpdate) {
+                    afterUpdate(targetId, result.data.upvotes, result.data.downvotes);
+                }
+            })
+            .catch(function (error) {
+                console.error(error);
+            })
+            .finally(function () {
+                button.disabled = false;
+            });
+    });
+}
+
+function aggiornaVotiContenuto(container, targetType, targetId, upvotes, downvotes) {
+    const upCount = container.querySelector('[data-vote-count="up"]');
+    const downCount = container.querySelector('[data-vote-count="down"]');
+
+    container.dataset.voteTarget = targetType;
+    container.dataset.voteId = targetId || '';
+
+    if (upCount) {
+        upCount.textContent = String(upvotes);
+    }
+
+    if (downCount) {
+        downCount.textContent = String(downvotes);
+    }
+}
+
+function aggiornaTimelineVotiFrame(frameId, upvotes, downvotes) {
+    const timelineItem = document.querySelector('[data-frame-id="' + frameId + '"]');
+
+    if (!timelineItem) {
+        return;
+    }
+
+    timelineItem.dataset.frameUpvotes = String(upvotes);
+    timelineItem.dataset.frameDownvotes = String(downvotes);
+}
+
+function preparaIspezione(inspectionToggle, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
+    let inspectionActive = false;
+    const frameBox = frameImage.closest('.frame-tag-layer');
+
+    inspectionToggle.addEventListener('click', function () {
+        inspectionActive = !inspectionActive;
+        inspectionToggle.setAttribute('aria-pressed', inspectionActive ? 'true' : 'false');
+        inspectionToggle.textContent = inspectionActive ? 'Ispezione attiva' : 'Aggiungi tag';
+
+        if (frameBox) {
+            frameBox.classList.toggle('frame-tag-layer--inspect', inspectionActive);
+        }
+
+        resetSidebarMeta(sidebarMeta);
+        resetSidebarTitle(sidebarTitle);
+        aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
+        mostraMessaggioSidebar(inspectionActive ? 'Clicca sul punto del frame in cui vuoi aggiungere il tag.' : 'Seleziona un Pulse-Tag per vedere i dettagli hardware.');
+    });
+
+    frameImage.addEventListener('click', function (event) {
+        if (!inspectionActive) {
+            return;
+        }
+
+        const coordinates = calcolaCoordinateFrame(event, frameImage);
+
+        if (!coordinates) {
+            mostraMessaggioSidebar('Coordinate non valide.');
+            return;
+        }
+
+        mostraFormIspezione(
+            frameImage.dataset.frameId,
+            coordinates.x,
+            coordinates.y,
+            tagLayer,
+            sidebarContent,
+            sidebarMeta,
+            sidebarTitle,
+            sidebarVotes
+        );
+    });
+}
+
+function calcolaCoordinateFrame(event, frameImage) {
+    const rect = frameImage.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+        return null;
+    }
+
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    return {
+        x: limitaPercentuale(x),
+        y: limitaPercentuale(y),
+    };
+}
+
+function limitaPercentuale(value) {
+    return Math.max(0, Math.min(100, Number(value.toFixed(2))));
+}
+
+function mostraFormIspezione(frameId, coordX, coordY, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
+    svuotaElemento(sidebarContent);
+    aggiornaSidebarTitle(sidebarTitle, 'Nuovo tag');
+    aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
+    svuotaElemento(sidebarMeta);
+
+    const form = document.createElement('form');
+    const message = document.createElement('p');
+
+    form.className = 'inspection-form';
+    message.className = 'inspection-message';
+    message.setAttribute('aria-live', 'polite');
+
+    aggiungiInputNascosto(form, 'id_frame', frameId);
+    aggiungiInputNascosto(form, 'coord_x', coordX);
+    aggiungiInputNascosto(form, 'coord_y', coordY);
+
+    aggiungiSelectHardware(form);
+    aggiungiCampoTesto(form, 'nome_modello', 'Nome modello', 'text', true, 120);
+    aggiungiCampoTesto(form, 'produttore', 'Produttore', 'text', true, 120);
+    aggiungiCampoTesto(form, 'anno_rilascio', 'Anno produzione', 'number', false, null);
+    aggiungiAreaTesto(form, 'descrizione', 'Descrizione');
+    aggiungiAreaTesto(form, 'curiosita', 'Curiosità');
+    aggiungiCheckbox(form, 'prop_fittizio', 'Prop fittizio');
+
+    const submitGroup = document.createElement('div');
+    const submitButton = document.createElement('button');
+    submitGroup.className = 'field-group';
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Salva tag';
+    submitGroup.appendChild(submitButton);
+    form.appendChild(submitGroup);
+    form.appendChild(message);
+
+    form.addEventListener('change', function (event) {
+        if (event.target.name === 'id_hardware') {
+            aggiornaCampiManuali(form);
+        }
+    });
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        salvaTag(form, submitButton, message, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+    });
+
+    sidebarContent.appendChild(form);
+    aggiornaCampiManuali(form);
+}
+
+function aggiungiSelectHardware(form) {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    const select = document.createElement('select');
+    const emptyOption = document.createElement('option');
+    const template = document.getElementById('hardware-options-template');
+
+    group.className = 'field-group';
+    label.setAttribute('for', 'inspection-hardware');
+    label.textContent = 'Hardware esistente';
+    select.name = 'id_hardware';
+    select.id = 'inspection-hardware';
+    emptyOption.value = '';
+    emptyOption.textContent = 'Seleziona già esistente';
+    select.appendChild(emptyOption);
+
+    if (template) {
+        select.appendChild(template.content.cloneNode(true));
+    }
+
+    group.appendChild(label);
+    group.appendChild(select);
+    form.appendChild(group);
+}
+
+function aggiungiCampoTesto(form, name, labelText, type, required, maxLength) {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+
+    group.className = 'field-group';
+    label.setAttribute('for', 'inspection-' + name);
+    label.textContent = labelText;
+    input.type = type;
+    input.name = name;
+    input.id = 'inspection-' + name;
+
+    if (required) {
+        input.required = true;
+    }
+
+    if (maxLength) {
+        input.maxLength = maxLength;
+    }
+
+    if (name === 'anno_rilascio') {
+        input.step = '1';
+    }
+
+    group.appendChild(label);
+    group.appendChild(input);
+    form.appendChild(group);
+}
+
+function aggiungiAreaTesto(form, name, labelText) {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    const textarea = document.createElement('textarea');
+
+    group.className = 'field-group';
+    label.setAttribute('for', 'inspection-' + name);
+    label.textContent = labelText;
+    textarea.name = name;
+    textarea.id = 'inspection-' + name;
+    textarea.rows = 3;
+
+    group.appendChild(label);
+    group.appendChild(textarea);
+    form.appendChild(group);
+}
+
+function aggiungiCheckbox(form, name, labelText) {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+
+    group.className = 'field-group checkbox-group';
+    label.className = 'checkbox-label';
+    input.type = 'checkbox';
+    input.name = name;
+    input.value = '1';
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(labelText));
+    group.appendChild(label);
+    form.appendChild(group);
+}
+
+function aggiungiInputNascosto(form, name, value) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+}
+
+function aggiornaCampiManuali(form) {
+    const selectedHardware = form.querySelector('[name="id_hardware"]').value !== '';
+    const manualFields = form.querySelectorAll('[name="nome_modello"], [name="produttore"], [name="anno_rilascio"], [name="descrizione"], [name="curiosita"], [name="prop_fittizio"]');
+
+    manualFields.forEach(function (field) {
+        field.disabled = selectedHardware;
+    });
+
+    form.querySelector('[name="nome_modello"]').required = !selectedHardware;
+    form.querySelector('[name="produttore"]').required = !selectedHardware;
+}
+
+function salvaTag(form, submitButton, message, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
+    const selectedHardware = form.querySelector('[name="id_hardware"]').value !== '';
+    const nomeModello = form.querySelector('[name="nome_modello"]').value.trim();
+    const produttore = form.querySelector('[name="produttore"]').value.trim();
+
+    if (!selectedHardware && (nomeModello === '' || produttore === '')) {
+        message.textContent = 'Scegli un hardware esistente oppure compila nome modello e produttore.';
+        return;
+    }
+
+    submitButton.disabled = true;
+    message.textContent = 'Salvataggio in corso...';
+
+    fetch('api_save_tag.php', {
+        method: 'POST',
+        body: new FormData(form),
+    })
+        .then(function (response) {
+            return response.json().then(function (result) {
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Errore durante il salvataggio.');
+                }
+
+                return result;
+            });
+        })
+        .then(function (result) {
+            const frameId = form.querySelector('[name="id_frame"]').value;
+
+            caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+            resetSidebarMeta(sidebarMeta);
+            resetSidebarTitle(sidebarTitle);
+            aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
+            mostraMessaggioSidebar(result.message || 'Tag salvato.');
+        })
+        .catch(function (error) {
+            message.textContent = error.message || 'Errore durante il salvataggio.';
+        })
+        .finally(function () {
+            submitButton.disabled = false;
+        });
 }
 
 function aggiornaFrameAttivo(timelineItem) {
@@ -124,7 +489,7 @@ function disegnaTag(tags, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, s
     if (!tags || tags.length === 0) {
         resetSidebarMeta(sidebarMeta);
         resetSidebarTitle(sidebarTitle);
-        aggiornaSidebarVotes(sidebarVotes, 0, 0);
+        aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
         mostraMessaggioSidebar('Nessun hardware taggato in questo frame.');
         return;
     }
@@ -159,6 +524,7 @@ function preparaDatiHardware(tag) {
         anno_rilascio: tag.anno_rilascio || hardware.anno_rilascio || '',
         descrizione: tag.descrizione || hardware.descrizione || '',
         curiosita: tag.curiosita || hardware.curiosita || '',
+        id_tag: tag.id_tag || '',
         upvotes: typeof tag.upvotes === 'number' ? tag.upvotes : 0,
         downvotes: typeof tag.downvotes === 'number' ? tag.downvotes : 0,
         autore_username: tag.autore && tag.autore.username ? tag.autore.username : '',
@@ -170,10 +536,10 @@ function mostraDettagliHardware(hardware, sidebarContent, sidebarMeta, sidebarTi
     svuotaElemento(sidebarContent);
     aggiornaSidebarMeta(sidebarMeta, hardware.autore_username, hardware.creato_il);
     aggiornaSidebarTitle(sidebarTitle, hardware.nome_modello);
-    aggiornaSidebarVotes(sidebarVotes, hardware.upvotes, hardware.downvotes);
+    aggiornaSidebarVotes(sidebarVotes, hardware.id_tag, hardware.upvotes, hardware.downvotes);
 
     aggiungiDettaglio(sidebarContent, 'Produttore', hardware.produttore);
-    aggiungiDettaglio(sidebarContent, 'Anno rilascio', hardware.anno_rilascio);
+    aggiungiDettaglio(sidebarContent, 'Anno produzione', hardware.anno_rilascio);
     aggiungiParagrafo(sidebarContent, hardware.descrizione);
 
     if (hardware.curiosita) {
@@ -216,10 +582,12 @@ function resetSidebarTitle(sidebarTitle) {
     sidebarTitle.textContent = 'Prop';
 }
 
-function aggiornaSidebarVotes(sidebarVotes, upvotes, downvotes) {
-    svuotaElemento(sidebarVotes);
-    sidebarVotes.appendChild(creaVoteBadge('up', upvotes));
-    sidebarVotes.appendChild(creaVoteBadge('down', downvotes));
+function aggiornaSidebarVotes(sidebarVotes, idTag, upvotes, downvotes) {
+    aggiornaVotiContenuto(sidebarVotes, 'tag', idTag, upvotes, downvotes);
+
+    sidebarVotes.querySelectorAll('[data-vote]').forEach(function (button) {
+        button.disabled = sidebarVotes.dataset.canVote !== '1' || !idTag;
+    });
 }
 
 function formatDate(value) {
@@ -234,26 +602,6 @@ function formatDate(value) {
     }
 
     return date.toLocaleDateString('it-IT');
-}
-
-function creaVoteBadge(type, value) {
-    const badge = document.createElement('span');
-    const icon = document.createElement('span');
-    const count = document.createElement('span');
-
-    badge.className = 'hardware-vote-badge hardware-vote-badge--' + type;
-    badge.setAttribute('aria-label', (type === 'up' ? 'Upvote: ' : 'Downvote: ') + value);
-    icon.className = 'hardware-vote-badge__icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = type === 'up' ? '▲' : '▼';
-
-    count.className = 'hardware-vote-badge__count';
-    count.textContent = String(value);
-
-    badge.appendChild(icon);
-    badge.appendChild(count);
-
-    return badge;
 }
 
 function aggiungiDettaglio(container, label, value) {

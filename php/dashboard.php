@@ -6,9 +6,10 @@ if (!isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     exit;
 }
 
-require __DIR__ . '/php/config.php';
+require __DIR__ . '/config.php';
 
 $userId = (int) $_SESSION['id_utente'];
+$isAdmin = $_SESSION['ruolo'] === 'admin';
 $sessionUsername = htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
 $currentYear = (int) date('Y');
 
@@ -99,7 +100,7 @@ function caricaImmagine(string $fieldName, string $targetDir, string $prefix, bo
         return null;
     }
 
-    $absoluteTargetDir = __DIR__ . '/' . $targetDir;
+    $absoluteTargetDir = __DIR__ . '/../' . $targetDir;
 
     if (!is_dir($absoluteTargetDir) && !mkdir($absoluteTargetDir, 0775, true)) {
         $errors[] = 'Impossibile preparare la cartella di upload.';
@@ -307,7 +308,7 @@ $filmsForSelect = [];
 $stats = [
     'film' => 0,
     'frame' => 0,
-    'hardware' => 0,
+    'tag' => 0,
 ];
 
 try {
@@ -321,7 +322,7 @@ try {
     $statsQueries = [
         'film' => 'SELECT COUNT(*) FROM FILM WHERE id_utente_creatore = ?',
         'frame' => 'SELECT COUNT(*) FROM FRAME WHERE id_utente_creatore = ?',
-        'hardware' => 'SELECT COUNT(*) FROM HARDWARE WHERE id_utente_creatore = ?',
+        'tag' => 'SELECT COUNT(*) FROM TAGS WHERE id_utente = ?',
     ];
 
     foreach ($statsQueries as $key => $query) {
@@ -344,21 +345,21 @@ try {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard contributor · CineSpecs</title>
-    <script src="js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/js/theme-init.js'); ?>"></script>
-    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
-    <link rel="stylesheet" href="css/layout.css?v=<?php echo filemtime(__DIR__ . '/css/layout.css'); ?>">
+    <script src="../js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-init.js'); ?>"></script>
+    <link rel="stylesheet" href="../css/style.css?v=<?php echo filemtime(__DIR__ . '/../css/style.css'); ?>">
+    <link rel="stylesheet" href="../css/layout.css?v=<?php echo filemtime(__DIR__ . '/../css/layout.css'); ?>">
 </head>
 <body>
 <header class="site-header">
     <div class="container header-inner">
-        <a href="index.php" class="brand">
+        <a href="../index.php" class="brand">
             <img
-                src="assets/icons/logo.png"
+                src="../assets/icons/logo.png"
                 alt="CineSpecs"
                 class="brand-logo"
                 id="brand-logo"
-                data-light-logo="assets/icons/logo_dark.png"
-                data-dark-logo="assets/icons/logo.png"
+                data-light-logo="../assets/icons/logo_dark.png"
+                data-dark-logo="../assets/icons/logo.png"
             >
             <span class="visually-hidden">CineSpecs</span>
         </a>
@@ -367,6 +368,7 @@ try {
             <div class="header-auth">
                 <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
                 <nav class="header-auth-pill" aria-label="Azioni account">
+                    <a href="dashboard.php" aria-current="page">Dashboard</a>
                     <?php if ($_SESSION['ruolo'] === 'admin'): ?>
                         <a href="admin.php">Admin</a>
                     <?php endif; ?>
@@ -388,18 +390,33 @@ try {
         </section>
 
         <section class="dashboard-stats" aria-label="Statistiche contributi">
-            <article class="dashboard-stat">
-                <span class="dashboard-stat__label">Film inseriti</span>
+            <button
+                type="button"
+                class="dashboard-stat dashboard-stat--button"
+                data-content-action="list_my_films"
+                aria-controls="my-content-panel"
+            >
+                <span class="dashboard-stat__label">Film personali</span>
                 <strong class="dashboard-stat__value"><?php echo $stats['film']; ?></strong>
-            </article>
-            <article class="dashboard-stat">
-                <span class="dashboard-stat__label">Frame caricati</span>
+            </button>
+            <button
+                type="button"
+                class="dashboard-stat dashboard-stat--button"
+                data-content-action="list_my_frames"
+                aria-controls="my-content-panel"
+            >
+                <span class="dashboard-stat__label">Frame personali</span>
                 <strong class="dashboard-stat__value"><?php echo $stats['frame']; ?></strong>
-            </article>
-            <article class="dashboard-stat">
-                <span class="dashboard-stat__label">Prop aggiunti</span>
-                <strong class="dashboard-stat__value"><?php echo $stats['hardware']; ?></strong>
-            </article>
+            </button>
+            <button
+                type="button"
+                class="dashboard-stat dashboard-stat--button"
+                data-content-action="list_my_tags"
+                aria-controls="my-content-panel"
+            >
+                <span class="dashboard-stat__label">Tag personali</span>
+                <strong class="dashboard-stat__value"><?php echo $stats['tag']; ?></strong>
+            </button>
         </section>
 
         <?php if ($feedbackMessage !== ''): ?>
@@ -407,6 +424,16 @@ try {
                 <?php echo htmlspecialchars($feedbackMessage, ENT_QUOTES, 'UTF-8'); ?>
             </p>
         <?php endif; ?>
+
+        <section class="search-panel my-content-panel" id="my-content-panel" aria-labelledby="my-content-title">
+            <div class="grid-heading">
+                <div>
+                    <h2 id="my-content-title">I miei contenuti</h2>
+                    <p id="my-content-status" aria-live="polite">Seleziona una pillola per vedere l'elenco.</p>
+                </div>
+            </div>
+            <div id="my-content-list" class="my-content-list" data-current-action=""></div>
+        </section>
 
         <section class="dashboard-switcher" aria-label="Scegli contenuto da inserire">
             <button
@@ -542,7 +569,7 @@ try {
     </div>
 </main>
 
-<script src="js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/js/theme-toggle.js'); ?>"></script>
-<script src="js/validation.js?v=<?php echo filemtime(__DIR__ . '/js/validation.js'); ?>"></script>
+<script src="../js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-toggle.js'); ?>"></script>
+<script src="../js/validation.js?v=<?php echo filemtime(__DIR__ . '/../js/validation.js'); ?>"></script>
 </body>
 </html>

@@ -96,18 +96,18 @@ try {
                 <?php if ($isLoggedIn): ?>
                     <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
                     <nav class="header-auth-pill" aria-label="Azioni account">
-                        <a href="dashboard.php">Dashboard</a>
+                        <a href="php/dashboard.php">Dashboard</a>
                         <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                            <a href="admin.php">Admin</a>
+                            <a href="php/admin.php">Admin</a>
                         <?php endif; ?>
-                        <a href="logout.php">Logout</a>
+                        <a href="php/logout.php">Logout</a>
                     </nav>
                 <?php else: ?>
                     <details class="auth-menu">
                         <summary class="theme-toggle">Login</summary>
                         <div class="auth-menu-panel">
-                            <a href="login.php">Accedi</a>
-                            <a href="register.php">Registrati</a>
+                            <a href="php/login.php">Accedi</a>
+                            <a href="php/register.php">Registrati</a>
                         </div>
                     </details>
                 <?php endif; ?>
@@ -154,7 +154,10 @@ try {
 
             <section aria-labelledby="catalog-title">
                 <div class="grid-heading">
-                    <h2 id="catalog-title">Catalogo film</h2>
+                    <div class="heading-with-action">
+                        <h2 id="catalog-title">Catalogo film</h2>
+                        <a class="heading-add-link" href="php/dashboard.php?tab=create_film" aria-label="Aggiungi un film">+</a>
+                    </div>
                     <p><?php echo count($films); ?> risultati</p>
                 </div>
 
@@ -191,7 +194,7 @@ try {
                                                 ·
                                                 <?php echo $film['regista'] ? htmlspecialchars($film['regista'], ENT_QUOTES, 'UTF-8') : 'Regista n/d'; ?>
                                             </span>
-                                            <a href="frame_viewer.php?film=<?php echo (int) $film['id_film']; ?>">Apri frame</a>
+                                            <a href="php/frame_viewer.php?film=<?php echo (int) $film['id_film']; ?>">Apri frame</a>
                                         </div>
                                     </div>
                                 </article>

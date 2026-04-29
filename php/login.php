@@ -12,21 +12,21 @@ if (isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login · CineSpecs</title>
-    <script src="js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/js/theme-init.js'); ?>"></script>
-    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
-    <link rel="stylesheet" href="css/layout.css?v=<?php echo filemtime(__DIR__ . '/css/layout.css'); ?>">
+    <script src="../js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-init.js'); ?>"></script>
+    <link rel="stylesheet" href="../css/style.css?v=<?php echo filemtime(__DIR__ . '/../css/style.css'); ?>">
+    <link rel="stylesheet" href="../css/layout.css?v=<?php echo filemtime(__DIR__ . '/../css/layout.css'); ?>">
 </head>
 <body>
 <header class="site-header">
     <div class="container header-inner">
-        <a href="index.php" class="brand">
+        <a href="../index.php" class="brand">
             <img
-                src="assets/icons/logo.png"
+                src="../assets/icons/logo.png"
                 alt="CineSpecs"
                 class="brand-logo"
                 id="brand-logo"
-                data-light-logo="assets/icons/logo_dark.png"
-                data-dark-logo="assets/icons/logo.png"
+                data-light-logo="../assets/icons/logo_dark.png"
+                data-dark-logo="../assets/icons/logo.png"
             >
             <span class="visually-hidden">CineSpecs</span>
         </a>
@@ -72,8 +72,8 @@ if (isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     </div>
 </main>
 
-<script src="js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/js/theme-toggle.js'); ?>"></script>
-<script src="js/validation.js?v=<?php echo filemtime(__DIR__ . '/js/validation.js'); ?>"></script>
+<script src="../js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-toggle.js'); ?>"></script>
+<script src="../js/validation.js?v=<?php echo filemtime(__DIR__ . '/../js/validation.js'); ?>"></script>
 <script>
 const loginForm = document.getElementById('login-form');
 const loginMessage = document.getElementById('login-message');
@@ -83,7 +83,7 @@ loginForm.addEventListener('submit', async function (event) {
     loginMessage.textContent = 'Accesso in corso...';
 
     try {
-        const response = await fetch('php/auth.php', {
+        const response = await fetch('auth.php', {
             method: 'POST',
             body: new FormData(loginForm)
         });
