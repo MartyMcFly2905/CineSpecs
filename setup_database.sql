@@ -5,6 +5,7 @@ COLLATE utf8mb4_unicode_ci;
 USE cinespecs;
 
 DROP TABLE IF EXISTS TAG_VOTI;
+DROP TABLE IF EXISTS FRAME_VOTI;
 DROP TABLE IF EXISTS TAGS;
 DROP TABLE IF EXISTS FRAME;
 DROP TABLE IF EXISTS HARDWARE;
@@ -43,7 +44,7 @@ CREATE TABLE HARDWARE (
     id_utente_creatore INT UNSIGNED NOT NULL,
     nome_modello VARCHAR(120) NOT NULL,
     produttore VARCHAR(120) NOT NULL,
-    anno_rilascio YEAR DEFAULT NULL,
+    anno_rilascio SMALLINT DEFAULT NULL,
     descrizione TEXT DEFAULT NULL,
     curiosita TEXT DEFAULT NULL,
     prop_fittizio TINYINT(1) NOT NULL DEFAULT 0,
@@ -123,6 +124,28 @@ CREATE TABLE TAG_VOTI (
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE FRAME_VOTI (
+    id_frame INT UNSIGNED NOT NULL,
+    id_utente INT UNSIGNED NOT NULL,
+    upvote TINYINT(1) NOT NULL DEFAULT 0,
+    downvote TINYINT(1) NOT NULL DEFAULT 0,
+    creato_il TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggiornato_il TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_frame, id_utente),
+    CONSTRAINT chk_frame_voti_singolo CHECK (
+        (upvote = 1 AND downvote = 0) OR
+        (upvote = 0 AND downvote = 1)
+    ),
+    CONSTRAINT fk_frame_voti_frame
+        FOREIGN KEY (id_frame)
+        REFERENCES FRAME (id_frame)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_frame_voti_utente
+        FOREIGN KEY (id_utente)
+        REFERENCES UTENTI (id_utente)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 INSERT INTO UTENTI (username, email, password_hash, ruolo) VALUES
 ('admin', 'admin@cinespecs.local', '$2y$12$J7rMGw5Yq45TlX30pWqVVOIFIGsFCys2Xz2989Yljk0axFxxdPIkG', 'admin'),
 ('marta', 'marta@cinespecs.local', '$2y$12$J7rMGw5Yq45TlX30pWqVVOIFIGsFCys2Xz2989Yljk0axFxxdPIkG', 'contributor'),
@@ -155,6 +178,13 @@ INSERT INTO TAGS (id_frame, id_hardware, id_utente, coord_x, coord_y) VALUES
 (5, 5, 2, 49.00, 42.00);
 
 INSERT INTO TAG_VOTI (id_tag, id_utente, upvote, downvote) VALUES
+(1, 2, 1, 0),
+(2, 1, 1, 0),
+(3, 2, 1, 0),
+(4, 2, 0, 1),
+(5, 1, 1, 0);
+
+INSERT INTO FRAME_VOTI (id_frame, id_utente, upvote, downvote) VALUES
 (1, 2, 1, 0),
 (2, 1, 1, 0),
 (3, 2, 1, 0),
