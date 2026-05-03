@@ -142,6 +142,7 @@ function setupDashboardContent() {
     let currentScope = '';
     let currentSort = '';
     let currentDirection = 'desc';
+    let currentPage = 1;
 
     function setStatus(message) {
         status.textContent = message;
@@ -156,7 +157,7 @@ function setupDashboardContent() {
         });
     }
 
-    function buildListUrl(action, scope, sort, direction) {
+    function buildListUrl(action, scope, sort, direction, page) {
         let url = 'api_crud.php?action=' + encodeURIComponent(action);
 
         if (scope) {
@@ -168,20 +169,25 @@ function setupDashboardContent() {
             url += '&direction=' + encodeURIComponent(direction);
         }
 
+        if (page && page > 1) {
+            url += '&page=' + encodeURIComponent(page);
+        }
+
         return url;
     }
 
-    function loadContent(action, scope, sort, direction) {
+    function loadContent(action, scope, sort, direction, page) {
         currentAction = action;
         currentScope = scope || '';
         currentSort = sort || '';
         currentDirection = direction || 'desc';
+        currentPage = page || 1;
         list.setAttribute('data-current-action', action);
         setActiveButton(action, currentScope);
         setStatus('Caricamento in corso...');
         list.innerHTML = '';
 
-        fetch(buildListUrl(action, currentScope, currentSort, currentDirection), {
+        fetch(buildListUrl(action, currentScope, currentSort, currentDirection, currentPage), {
             method: 'GET',
         })
             .then(function (response) {
@@ -196,8 +202,16 @@ function setupDashboardContent() {
             .then(function (result) {
                 let items = result.data.items || [];
                 let total = typeof result.data.total === 'number' ? result.data.total : items.length;
-                renderContent(action, items);
-                setStatus(total === 1 ? '1 contenuto trovato.' : total + ' contenuti trovati.');
+                let pageInfo = paginationInfo(result.data, total);
+
+                if (items.length === 0 && total > 0 && pageInfo.page > pageInfo.totalPages) {
+                    loadContent(action, currentScope, currentSort, currentDirection, pageInfo.totalPages);
+                    return;
+                }
+
+                currentPage = pageInfo.page;
+                renderContent(action, items, pageInfo);
+                setStatus(statusMessage(total, pageInfo));
                 updateStatFromAction(action, total, currentScope);
             })
             .catch(function (error) {
@@ -206,7 +220,7 @@ function setupDashboardContent() {
             });
     }
 
-    function renderContent(action, items) {
+    function renderContent(action, items, pageInfo) {
         if (items.length === 0) {
             list.innerHTML = '<p class="empty-state">Nessun contenuto da mostrare.</p>';
             return;
@@ -221,7 +235,7 @@ function setupDashboardContent() {
         table.className = 'my-content-table';
         thead.appendChild(createTableHead(action));
 
-        items.slice(0, 10).forEach(function (item) {
+        items.forEach(function (item) {
             tbody.appendChild(createContentRow(action, item));
         });
 
@@ -229,6 +243,63 @@ function setupDashboardContent() {
         table.appendChild(tbody);
         wrapper.appendChild(table);
         list.appendChild(wrapper);
+
+        if (pageInfo.totalPages > 1) {
+            list.appendChild(createPagination(pageInfo));
+        }
+    }
+
+    function paginationInfo(data, total) {
+        let pageSize = Number(data.page_size || 10);
+        let totalPages = Number(data.total_pages || Math.ceil(total / pageSize) || 1);
+        let page = Number(data.page || currentPage || 1);
+
+        return {
+            page: page,
+            pageSize: pageSize,
+            totalPages: Math.max(1, totalPages),
+            hasPrev: Boolean(data.has_prev),
+            hasNext: Boolean(data.has_next),
+        };
+    }
+
+    function statusMessage(total, pageInfo) {
+        let base = total === 1 ? '1 contenuto trovato.' : total + ' contenuti trovati.';
+
+        if (total > pageInfo.pageSize) {
+            return base + ' Pagina ' + pageInfo.page + ' di ' + pageInfo.totalPages + '.';
+        }
+
+        return base;
+    }
+
+    function createPagination(pageInfo) {
+        let controls = document.createElement('div');
+        let prevButton = document.createElement('button');
+        let nextButton = document.createElement('button');
+        let label = document.createElement('span');
+
+        controls.className = 'content-pagination';
+        prevButton.type = 'button';
+        prevButton.className = 'content-pagination__button';
+        prevButton.textContent = 'Precedente';
+        prevButton.disabled = !pageInfo.hasPrev;
+        prevButton.setAttribute('data-page', String(pageInfo.page - 1));
+
+        label.className = 'content-pagination__label';
+        label.textContent = 'Pagina ' + pageInfo.page + ' di ' + pageInfo.totalPages;
+
+        nextButton.type = 'button';
+        nextButton.className = 'content-pagination__button';
+        nextButton.textContent = 'Successivo';
+        nextButton.disabled = !pageInfo.hasNext;
+        nextButton.setAttribute('data-page', String(pageInfo.page + 1));
+
+        controls.appendChild(prevButton);
+        controls.appendChild(label);
+        controls.appendChild(nextButton);
+
+        return controls;
     }
 
     function createTableHead(action) {
@@ -286,6 +357,7 @@ function setupDashboardContent() {
         let row = document.createElement('tr');
         let button = document.createElement('button');
         let deleteConfig = getDeleteConfig(action, item);
+        let actions = createRowActions(action, item, button);
         let cells;
 
         button.type = 'button';
@@ -301,7 +373,7 @@ function setupDashboardContent() {
                 item.regista,
                 shortDate(item.creato_il),
                 item.autore,
-                button,
+                actions,
             ];
         } else if (action === 'list_my_frames') {
             cells = [
@@ -310,7 +382,7 @@ function setupDashboardContent() {
                 formatVotes(item),
                 shortDate(item.creato_il),
                 item.autore,
-                button,
+                actions,
             ];
         } else {
             cells = [
@@ -319,7 +391,7 @@ function setupDashboardContent() {
                 formatVotes(item),
                 shortDate(item.creato_il),
                 item.autore,
-                button,
+                actions,
             ];
         }
 
@@ -336,6 +408,42 @@ function setupDashboardContent() {
         });
 
         return row;
+    }
+
+    function createRowActions(action, item, deleteButton) {
+        let wrapper = document.createElement('div');
+        let editLink = editLinkFor(action, item);
+
+        wrapper.className = 'my-content-actions';
+
+        if (editLink) {
+            wrapper.appendChild(editLink);
+        }
+
+        wrapper.appendChild(deleteButton);
+
+        return wrapper;
+    }
+
+    function editLinkFor(action, item) {
+        let link = document.createElement('a');
+
+        if (currentScope === 'all') {
+            return null;
+        }
+
+        if (action === 'list_my_films') {
+            link.href = 'dashboard.php?tab=create_film&edit_film=' + encodeURIComponent(item.id_film);
+        } else if (action === 'list_my_frames') {
+            link.href = 'dashboard.php?tab=create_frame&edit_frame=' + encodeURIComponent(item.id_frame);
+        } else {
+            return null;
+        }
+
+        link.className = 'my-content-edit';
+        link.textContent = 'Modifica';
+
+        return link;
     }
 
     function getDeleteConfig(action, item) {
@@ -387,7 +495,7 @@ function setupDashboardContent() {
             })
             .then(function (result) {
                 setStatus(result.message || 'Contenuto eliminato.');
-                loadContent(currentAction, currentScope, currentSort, currentDirection);
+                loadContent(currentAction, currentScope, currentSort, currentDirection, currentPage);
                 refreshDashboardStats();
             })
             .catch(function (error) {
@@ -401,7 +509,7 @@ function setupDashboardContent() {
             let action = button.getAttribute('data-content-action');
             let scope = button.getAttribute('data-content-scope') || '';
 
-            fetch(buildListUrl(action, scope, '', 'desc'), {
+            fetch(buildListUrl(action, scope, '', 'desc', 1), {
                 method: 'GET',
             })
                 .then(function (response) {
@@ -450,11 +558,13 @@ function setupDashboardContent() {
         button.addEventListener('click', function () {
             currentSort = '';
             currentDirection = 'desc';
+            currentPage = 1;
             loadContent(
                 button.getAttribute('data-content-action'),
                 button.getAttribute('data-content-scope') || '',
                 currentSort,
-                currentDirection
+                currentDirection,
+                currentPage
             );
         });
     });
@@ -465,7 +575,19 @@ function setupDashboardContent() {
         if (sortButton) {
             let nextSort = sortButton.getAttribute('data-sort-key');
             let nextDirection = currentSort === nextSort && currentDirection === 'desc' ? 'asc' : 'desc';
-            loadContent(currentAction, currentScope, nextSort, nextDirection);
+            loadContent(currentAction, currentScope, nextSort, nextDirection, 1);
+            return;
+        }
+
+        let pageButton = event.target.closest('[data-page]');
+
+        if (pageButton && !pageButton.disabled) {
+            let nextPage = Number(pageButton.getAttribute('data-page'));
+
+            if (nextPage > 0) {
+                loadContent(currentAction, currentScope, currentSort, currentDirection, nextPage);
+            }
+
             return;
         }
 
@@ -549,7 +671,7 @@ function setupFrameValidation() {
             isValid = false;
         }
 
-        if (!image || !image.files || image.files.length === 0) {
+        if (form.querySelector('[name="action"]').value !== 'update_frame' && (!image || !image.files || image.files.length === 0)) {
             showFieldError(image, 'Carica l\'immagine del frame.');
             isValid = false;
         }
