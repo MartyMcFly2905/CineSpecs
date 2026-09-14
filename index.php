@@ -1,4 +1,5 @@
 <?php
+// Homepage con il catalogo dei film
 session_start();
 
 require __DIR__ . '/php/config.php';
@@ -12,9 +13,11 @@ $isLoggedIn = isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ru
 $sessionUsername = $isLoggedIn ? htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8') : '';
 
 try {
-    $yearStmt = $pdo->query('SELECT DISTINCT anno_uscita FROM FILM WHERE anno_uscita IS NOT NULL ORDER BY anno_uscita DESC');
+    // Anni per il filtro
+    $yearStmt = $pdo->query('SELECT DISTINCT anno_uscita FROM film WHERE anno_uscita IS NOT NULL ORDER BY anno_uscita DESC');
     $availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
+    // Query base per i film
     $query = 'SELECT
                 f.id_film,
                 f.titolo,
@@ -22,11 +25,14 @@ try {
                 f.regista,
                 f.copertina_path,
                 f.creato_il,
+                f.sinossi,
                 u.username AS autore_film
-              FROM FILM f
-              INNER JOIN UTENTI u ON f.id_utente_creatore = u.id_utente';
+              FROM film f
+              INNER JOIN utenti u ON f.id_utente_creatore = u.id_utente';
     $conditions = [];
     $params = [];
+
+    // Filtri di ricerca
 
     if ($searchTerm !== '') {
         $conditions[] = 'titolo LIKE :search';
@@ -44,6 +50,7 @@ try {
 
     $query .= ' ORDER BY anno_uscita DESC, titolo ASC';
 
+    // Esegue la query
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $films = $stmt->fetchAll();
@@ -88,12 +95,13 @@ try {
                 data-light-logo="assets/icons/logo_dark.png"
                 data-dark-logo="assets/icons/logo.png"
             >
-            <span class="visually-hidden">CineSpecs</span>
+            <h1 class="visually-hidden">CineSpecs</h1>
         </a>
         <div class="header-actions">
-            <p class="header-meta">Hardware usato nei film</p>
             <div class="header-auth">
-                <?php if ($isLoggedIn): ?>
+                <?php
+                // Mostra menu utente se loggato, altrimenti tasto login
+                if ($isLoggedIn): ?>
                     <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
                     <nav class="header-auth-pill" aria-label="Azioni account">
                         <a href="php/dashboard.php">Dashboard</a>
@@ -112,6 +120,7 @@ try {
                     </details>
                 <?php endif; ?>
             </div>
+            <a href="manuale.html" class="theme-toggle">Manuale</a>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
         </div>
     </div>
@@ -130,7 +139,7 @@ try {
                             type="text"
                             name="q"
                             id="search-input"
-                            placeholder="Es. Alien, Blade Runner"
+                            placeholder="Es. Matrix, Ritorno al Futuro"
                             value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>"
                         >
                     </div>
@@ -179,11 +188,17 @@ try {
                                         <?php else: ?>
                                             <span class="film-card__placeholder">Cover non disponibile</span>
                                         <?php endif; ?>
+                                        
+                                        <?php if (!empty($film['sinossi'])): ?>
+                                            <div class="film-card__synopsis">
+                                                <p><?php echo htmlspecialchars($film['sinossi'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                            </div>
+                                        <?php endif; ?>
                                     </figure>
                                     <div class="film-card-body">
                                         <h3><?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?></h3>
                                         <p class="content-credit">
-                                            Aggiunto da <?php echo htmlspecialchars($film['autore_film'], ENT_QUOTES, 'UTF-8'); ?>
+                                             <?php echo htmlspecialchars($film['autore_film'], ENT_QUOTES, 'UTF-8'); ?>
                                             <?php if (!empty($film['creato_il'])): ?>
                                                 · <?php echo htmlspecialchars(date('d/m/Y', strtotime($film['creato_il'])), ENT_QUOTES, 'UTF-8'); ?>
                                             <?php endif; ?>

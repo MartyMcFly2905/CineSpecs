@@ -1,3 +1,4 @@
+// visualizzatore frame e tag
 document.addEventListener('DOMContentLoaded', function () {
     const frameImage = document.getElementById('frame-image');
     const tagLayer = document.getElementById('tag-layer');
@@ -44,30 +45,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-function caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
-    fetch('api_get_tags.php?id_frame=' + encodeURIComponent(frameId))
-        .then(function (response) {
-            if (!response.ok) {
-                throw new Error('Errore HTTP ' + response.status);
-            }
+// carica i tag del frame
+async function caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
+    try {
+        const response = await fetch('api_get_tags.php?id_frame=' + encodeURIComponent(frameId));
 
-            return response.json();
-        })
-        .then(function (result) {
-            if (!result.success) {
-                throw new Error(result.message || 'Errore nel caricamento dei tag.');
-            }
+        if (!response.ok) {
+            throw new Error('Errore HTTP ' + response.status);
+        }
 
-            disegnaTag(result.data, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
-        })
-        .catch(function (error) {
-            console.error(error);
-            svuotaElemento(tagLayer);
-            resetSidebarMeta(sidebarMeta);
-            resetSidebarTitle(sidebarTitle);
-            aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
-            mostraMessaggioSidebar('Impossibile caricare i tag del frame.');
-        });
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Errore nel caricamento dei tag.');
+        }
+
+        disegnaTag(result.data, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+    } catch (error) {
+        console.error(error);
+        svuotaElemento(tagLayer);
+        resetSidebarMeta(sidebarMeta);
+        resetSidebarTitle(sidebarTitle);
+        aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
+        mostraMessaggioSidebar('Impossibile caricare i tag del frame.');
+    }
 }
 
 function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes) {
@@ -97,6 +98,7 @@ function preparaTimeline(timelineList, frameImage, tagLayer, sidebarContent, sid
     });
 }
 
+// cambia frame selezionato
 function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes, frameTimestamp, frameDescription, frameAuthor, frameVotes) {
     const frameId = timelineItem.dataset.frameId;
     const frameSrc = timelineItem.dataset.frameSrc;
@@ -132,8 +134,9 @@ function cambiaFrame(timelineItem, frameImage, tagLayer, sidebarContent, sidebar
     caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
 }
 
+// gestione voti
 function preparaVotiContenuto(container, afterUpdate) {
-    container.addEventListener('click', function (event) {
+    container.addEventListener('click', async function (event) {
         const button = event.target.closest('[data-vote]');
 
         if (!button || button.disabled) {
@@ -154,32 +157,27 @@ function preparaVotiContenuto(container, afterUpdate) {
         formData.append('vote', vote);
         button.disabled = true;
 
-        fetch('api_vote.php', {
-            method: 'POST',
-            body: formData,
-        })
-            .then(function (response) {
-                return response.json().then(function (result) {
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Errore durante il voto.');
-                    }
-
-                    return result;
-                });
-            })
-            .then(function (result) {
-                aggiornaVotiContenuto(container, targetType, targetId, result.data.upvotes, result.data.downvotes);
-
-                if (afterUpdate) {
-                    afterUpdate(targetId, result.data.upvotes, result.data.downvotes);
-                }
-            })
-            .catch(function (error) {
-                console.error(error);
-            })
-            .finally(function () {
-                button.disabled = false;
+        try {
+            const response = await fetch('api_vote.php', {
+                method: 'POST',
+                body: formData,
             });
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Errore durante il voto.');
+            }
+
+            aggiornaVotiContenuto(container, targetType, targetId, result.data.upvotes, result.data.downvotes);
+
+            if (afterUpdate) {
+                afterUpdate(targetId, result.data.upvotes, result.data.downvotes);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            button.disabled = false;
+        }
     });
 }
 
@@ -210,6 +208,7 @@ function aggiornaTimelineVotiFrame(frameId, upvotes, downvotes) {
     timelineItem.dataset.frameDownvotes = String(downvotes);
 }
 
+// modalita per aggiungere tag
 function preparaIspezione(inspectionToggle, frameImage, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     let inspectionActive = false;
     const frameBox = frameImage.closest('.frame-tag-layer');
@@ -430,7 +429,8 @@ function aggiornaCampiManuali(form) {
     form.querySelector('[name="produttore"]').required = !selectedHardware;
 }
 
-function salvaTag(form, submitButton, message, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
+// salva il nuovo tag
+async function salvaTag(form, submitButton, message, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     const selectedHardware = form.querySelector('[name="id_hardware"]').value !== '';
     const nomeModello = form.querySelector('[name="nome_modello"]').value.trim();
     const produttore = form.querySelector('[name="produttore"]').value.trim();
@@ -443,34 +443,29 @@ function salvaTag(form, submitButton, message, tagLayer, sidebarContent, sidebar
     submitButton.disabled = true;
     message.textContent = 'Salvataggio in corso...';
 
-    fetch('api_save_tag.php', {
-        method: 'POST',
-        body: new FormData(form),
-    })
-        .then(function (response) {
-            return response.json().then(function (result) {
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Errore durante il salvataggio.');
-                }
-
-                return result;
-            });
-        })
-        .then(function (result) {
-            const frameId = form.querySelector('[name="id_frame"]').value;
-
-            caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
-            resetSidebarMeta(sidebarMeta);
-            resetSidebarTitle(sidebarTitle);
-            aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
-            mostraMessaggioSidebar(result.message || 'Tag salvato.');
-        })
-        .catch(function (error) {
-            message.textContent = error.message || 'Errore durante il salvataggio.';
-        })
-        .finally(function () {
-            submitButton.disabled = false;
+    try {
+        const response = await fetch('api_save_tag.php', {
+            method: 'POST',
+            body: new FormData(form),
         });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Errore durante il salvataggio.');
+        }
+
+        const frameId = form.querySelector('[name="id_frame"]').value;
+
+        caricaTag(frameId, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes);
+        resetSidebarMeta(sidebarMeta);
+        resetSidebarTitle(sidebarTitle);
+        aggiornaSidebarVotes(sidebarVotes, '', 0, 0);
+        mostraMessaggioSidebar(result.message || 'Tag salvato.');
+    } catch (error) {
+        message.textContent = error.message || 'Errore durante il salvataggio.';
+    } finally {
+        submitButton.disabled = false;
+    }
 }
 
 function aggiornaFrameAttivo(timelineItem) {
@@ -483,6 +478,7 @@ function aggiornaFrameAttivo(timelineItem) {
     timelineItem.classList.add('timeline-item--active');
 }
 
+// disegna i tag sul frame
 function disegnaTag(tags, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     svuotaElemento(tagLayer);
 
@@ -515,28 +511,35 @@ function disegnaTag(tags, tagLayer, sidebarContent, sidebarMeta, sidebarTitle, s
 }
 
 function preparaDatiHardware(tag) {
-    // Supporta sia il formato flat dell'API sia il formato con oggetto hardware.
     const hardware = tag.hardware || {};
 
     return {
-        nome_modello: tag.nome_modello || hardware.nome_modello || 'Hardware senza nome',
-        produttore: tag.produttore || hardware.produttore || '',
-        anno_rilascio: tag.anno_rilascio || hardware.anno_rilascio || '',
-        descrizione: tag.descrizione || hardware.descrizione || '',
-        curiosita: tag.curiosita || hardware.curiosita || '',
-        id_tag: tag.id_tag || '',
-        upvotes: typeof tag.upvotes === 'number' ? tag.upvotes : 0,
-        downvotes: typeof tag.downvotes === 'number' ? tag.downvotes : 0,
+        nome_modello:   tag.nome_modello   || hardware.nome_modello   || 'Hardware senza nome',
+        produttore:     tag.produttore     || hardware.produttore     || '',
+        anno_rilascio:  tag.anno_rilascio  || hardware.anno_rilascio  || '',
+        descrizione:    tag.descrizione    || hardware.descrizione    || '',
+        curiosita:      tag.curiosita      || hardware.curiosita      || '',
+        prop_fittizio:  tag.prop_fittizio  !== undefined ? tag.prop_fittizio  : (hardware.prop_fittizio !== undefined ? hardware.prop_fittizio : false),
+        id_tag:         tag.id_tag         || '',
+        upvotes:        typeof tag.upvotes   === 'number' ? tag.upvotes   : 0,
+        downvotes:      typeof tag.downvotes === 'number' ? tag.downvotes : 0,
         autore_username: tag.autore && tag.autore.username ? tag.autore.username : '',
-        creato_il: tag.creato_il || '',
+        creato_il:      tag.creato_il || '',
     };
 }
 
+// mostra dettagli hardware
 function mostraDettagliHardware(hardware, sidebarContent, sidebarMeta, sidebarTitle, sidebarVotes) {
     svuotaElemento(sidebarContent);
     aggiornaSidebarMeta(sidebarMeta, hardware.autore_username, hardware.creato_il);
     aggiornaSidebarTitle(sidebarTitle, hardware.nome_modello);
     aggiornaSidebarVotes(sidebarVotes, hardware.id_tag, hardware.upvotes, hardware.downvotes);
+
+    if (hardware.prop_fittizio) {
+        aggiungiDettaglio(sidebarContent, 'Tipologia', 'Prop fittizio');
+    } else {
+        aggiungiDettaglio(sidebarContent, 'Tipologia', 'Hardware reale');
+    }
 
     aggiungiDettaglio(sidebarContent, 'Produttore', hardware.produttore);
     aggiungiDettaglio(sidebarContent, 'Anno produzione', hardware.anno_rilascio);

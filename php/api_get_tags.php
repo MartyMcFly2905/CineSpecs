@@ -1,16 +1,11 @@
 <?php
+// Ritorna i tag di un frame
 require __DIR__ . '/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Metodo non consentito. Usa una richiesta GET.',
-        'data' => [],
-    ]);
-    exit;
+    send_json(false, 'Metodo non consentito. Usa una richiesta GET.', 405);
 }
 
 $idFrame = filter_input(INPUT_GET, 'id_frame', FILTER_VALIDATE_INT, [
@@ -18,27 +13,16 @@ $idFrame = filter_input(INPUT_GET, 'id_frame', FILTER_VALIDATE_INT, [
 ]);
 
 if ($idFrame === null) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Parametro id_frame mancante.',
-        'data' => [],
-    ]);
-    exit;
+    send_json(false, 'Parametro id_frame mancante.', 400);
 }
 
 if ($idFrame === false) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Parametro id_frame non valido.',
-        'data' => [],
-    ]);
-    exit;
+    send_json(false, 'Parametro id_frame non valido.', 400);
 }
 
 try {
-    $stmt = $pdo->prepare(
+    // Prende tag, hardware collegato, autore e voti
+    $rows = db_query($pdo,
         'SELECT
             t.id_tag,
             t.coord_x,
@@ -53,11 +37,12 @@ try {
             h.produttore,
             h.anno_rilascio,
             h.descrizione,
-            h.curiosita
-         FROM TAGS t
-         INNER JOIN HARDWARE h ON t.id_hardware = h.id_hardware
-         INNER JOIN UTENTI u ON t.id_utente = u.id_utente
-         LEFT JOIN TAG_VOTI tv ON tv.id_tag = t.id_tag
+            h.curiosita,
+            h.prop_fittizio
+         FROM tags t
+         INNER JOIN hardware h ON t.id_hardware = h.id_hardware
+         INNER JOIN utenti u ON t.id_utente = u.id_utente
+         LEFT JOIN tag_voti tv ON tv.id_tag = t.id_tag
          WHERE t.id_frame = ?
          GROUP BY
             t.id_tag,
@@ -71,47 +56,41 @@ try {
             h.produttore,
             h.anno_rilascio,
             h.descrizione,
-            h.curiosita
-         ORDER BY t.id_tag ASC'
-    );
-    $stmt->execute([$idFrame]);
-    $rows = $stmt->fetchAll();
+            h.curiosita,
+            h.prop_fittizio
+         ORDER BY t.id_tag ASC',
+        [$idFrame]
+    )->fetchAll();
 
     $tags = [];
 
+    // Prepara i dati da inviare
     foreach ($rows as $row) {
         $tags[] = [
-            'id_tag' => (int) $row['id_tag'],
-            'coord_x' => (float) $row['coord_x'],
-            'coord_y' => (float) $row['coord_y'],
-            'creato_il' => $row['creato_il'],
-            'upvotes' => (int) $row['upvotes'],
-            'downvotes' => (int) $row['downvotes'],
+            'id_tag'    => (int)   $row['id_tag'],
+            'coord_x'   => (float) $row['coord_x'],
+            'coord_y'   => (float) $row['coord_y'],
+            'creato_il' =>         $row['creato_il'],
+            'upvotes'   => (int)   $row['upvotes'],
+            'downvotes' => (int)   $row['downvotes'],
             'autore' => [
-                'id' => (int) $row['id_utente'],
-                'username' => $row['autore_tag'],
+                'id'       => (int) $row['id_utente'],
+                'username' =>       $row['autore_tag'],
             ],
             'hardware' => [
-                'id' => (int) $row['id_hardware'],
-                'nome_modello' => $row['nome_modello'],
-                'produttore' => $row['produttore'],
+                'id'            => (int)  $row['id_hardware'],
+                'nome_modello'  =>        $row['nome_modello'],
+                'produttore'    =>        $row['produttore'],
                 'anno_rilascio' => $row['anno_rilascio'] !== null ? (int) $row['anno_rilascio'] : null,
-                'descrizione' => $row['descrizione'],
-                'curiosita' => $row['curiosita'],
+                'descrizione'   =>        $row['descrizione'],
+                'curiosita'     =>        $row['curiosita'],
+                'prop_fittizio' => (bool) $row['prop_fittizio'],
             ],
         ];
     }
 
-    echo json_encode([
-        'success' => true,
-        'data' => $tags,
-    ]);
+    send_json(true, '', 200, $tags);
 } catch (PDOException $e) {
     error_log($e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Errore durante il recupero dei tag.',
-        'data' => [],
-    ]);
+    send_json(false, 'Errore durante il recupero dei tag.', 500);
 }

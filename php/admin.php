@@ -1,11 +1,14 @@
 <?php
+// Pannello admin per moderare i contenuti
 session_start();
 
+// Se non loggato vai al login
 if (!isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     header('Location: login.php');
     exit;
 }
 
+// Se non e admin torna alla home
 if ($_SESSION['ruolo'] !== 'admin') {
     header('Location: ../index.php');
     exit;
@@ -21,11 +24,12 @@ $stats = [
 ];
 $feedbackMessage = '';
 
+// Statistiche per la dashboard
 try {
     $statsQueries = [
-        'film' => 'SELECT COUNT(*) FROM FILM',
-        'frame' => 'SELECT COUNT(*) FROM FRAME',
-        'tag' => 'SELECT COUNT(*) FROM TAGS',
+        'film' => 'SELECT COUNT(*) FROM film',
+        'frame' => 'SELECT COUNT(*) FROM frame',
+        'tag' => 'SELECT COUNT(*) FROM tags',
     ];
 
     foreach ($statsQueries as $key => $query) {

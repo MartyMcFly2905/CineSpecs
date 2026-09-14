@@ -1,20 +1,10 @@
 <?php
+// salva un tag su un frame (creando l'hardware se serve)
 require __DIR__ . '/config.php';
 
 session_start();
 
 header('Content-Type: application/json; charset=utf-8');
-
-function send_json($success, $message, $statusCode, $data = [])
-{
-    http_response_code($statusCode);
-    echo json_encode([
-        'success' => $success,
-        'message' => $message,
-        'data' => $data,
-    ]);
-    exit;
-}
 
 function post_value($key)
 {
@@ -27,6 +17,7 @@ function post_value($key)
     return trim($value);
 }
 
+// valida l'anno (opzionale o intero valido)
 function valid_year($value)
 {
     if ($value === '') {
@@ -50,20 +41,20 @@ if (!isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     send_json(false, 'Devi effettuare il login per aggiungere un tag.', 401);
 }
 
-$idFrame = filter_input(INPUT_POST, 'id_frame', FILTER_VALIDATE_INT, [
+$idFrame      = filter_input(INPUT_POST, 'id_frame', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
 ]);
 $idHardwareRaw = post_value('id_hardware');
-$idHardware = null;
-$coordX = filter_input(INPUT_POST, 'coord_x', FILTER_VALIDATE_FLOAT);
-$coordY = filter_input(INPUT_POST, 'coord_y', FILTER_VALIDATE_FLOAT);
-$nomeModello = post_value('nome_modello');
-$produttore = post_value('produttore');
-$annoRilascio = post_value('anno_rilascio');
-$descrizione = post_value('descrizione');
-$curiosita = post_value('curiosita');
-$propFittizio = post_value('prop_fittizio') === '1' ? 1 : 0;
-$idUtente = (int) $_SESSION['id_utente'];
+$idHardware    = null;
+$coordX        = filter_input(INPUT_POST, 'coord_x', FILTER_VALIDATE_FLOAT);
+$coordY        = filter_input(INPUT_POST, 'coord_y', FILTER_VALIDATE_FLOAT);
+$nomeModello   = post_value('nome_modello');
+$produttore    = post_value('produttore');
+$annoRilascio  = post_value('anno_rilascio');
+$descrizione   = post_value('descrizione');
+$curiosita     = post_value('curiosita');
+$propFittizio  = post_value('prop_fittizio') === '1' ? 1 : 0;
+$idUtente      = (int) $_SESSION['id_utente'];
 
 if (!$idFrame) {
     send_json(false, 'Frame non valido.', 400);
@@ -111,95 +102,72 @@ if (!valid_year($annoRilascio)) {
     send_json(false, 'Anno di produzione non valido.', 400);
 }
 
-$annoDb = $annoRilascio !== '' ? (int) $annoRilascio : null;
+$annoDb      = $annoRilascio !== '' ? (int) $annoRilascio : null;
 $descrizione = $descrizione !== null && $descrizione !== '' ? $descrizione : null;
-$curiosita = $curiosita !== null && $curiosita !== '' ? $curiosita : null;
-$coordX = round((float) $coordX, 2);
-$coordY = round((float) $coordY, 2);
+$curiosita   = $curiosita   !== null && $curiosita   !== '' ? $curiosita   : null;
+$coordX      = round((float) $coordX, 2);
+$coordY      = round((float) $coordY, 2);
 
 try {
-    $frameStmt = $pdo->prepare(
-        'SELECT id_frame
-         FROM FRAME
-         WHERE id_frame = ?
-         LIMIT 1'
-    );
-    $frameStmt->execute([$idFrame]);
-
-    if (!$frameStmt->fetch()) {
+    // controllo che il frame esista
+    if (!db_query($pdo, 'SELECT id_frame FROM frame WHERE id_frame = ? LIMIT 1', [$idFrame])->fetch()) {
         send_json(false, 'Frame non trovato.', 404);
     }
 
+    // transazione per hardware e tag
     $pdo->beginTransaction();
 
     if ($usesExistingHardware) {
-        $hardwareStmt = $pdo->prepare(
-            'SELECT id_hardware
-             FROM HARDWARE
-             WHERE id_hardware = ?
-             LIMIT 1'
-        );
-        $hardwareStmt->execute([$idHardware]);
-
-        if (!$hardwareStmt->fetch()) {
+        if (!db_query($pdo, 'SELECT id_hardware FROM hardware WHERE id_hardware = ? LIMIT 1', [$idHardware])->fetch()) {
             $pdo->rollBack();
             send_json(false, 'Hardware selezionato non trovato.', 404);
         }
     } else {
-        $checkHardwareStmt = $pdo->prepare(
+        // cerco se esiste già lo stesso modello
+        $hardware = db_query($pdo,
             'SELECT id_hardware
-             FROM HARDWARE
+             FROM hardware
              WHERE LOWER(nome_modello) = LOWER(?) AND LOWER(produttore) = LOWER(?)
-             LIMIT 1'
-        );
-        $checkHardwareStmt->execute([$nomeModello, $produttore]);
-        $hardware = $checkHardwareStmt->fetch();
+             LIMIT 1',
+            [$nomeModello, $produttore]
+        )->fetch();
 
         if ($hardware) {
+            // riuso l'hardware trovato
             $idHardware = (int) $hardware['id_hardware'];
         } else {
-            $insertHardwareStmt = $pdo->prepare(
-                'INSERT INTO HARDWARE
+            // inserisco il nuovo hardware
+            db_query($pdo,
+                'INSERT INTO hardware
                     (id_utente_creatore, nome_modello, produttore, anno_rilascio, descrizione, curiosita, prop_fittizio)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$idUtente, $nomeModello, $produttore, $annoDb, $descrizione, $curiosita, $propFittizio]
             );
-            $insertHardwareStmt->execute([
-                $idUtente,
-                $nomeModello,
-                $produttore,
-                $annoDb,
-                $descrizione,
-                $curiosita,
-                $propFittizio,
-            ]);
             $idHardware = (int) $pdo->lastInsertId();
         }
     }
 
-    $checkTagStmt = $pdo->prepare(
-        'SELECT id_tag
-         FROM TAGS
-         WHERE id_frame = ? AND id_hardware = ?
-         LIMIT 1'
-    );
-    $checkTagStmt->execute([$idFrame, $idHardware]);
-
-    if ($checkTagStmt->fetch()) {
+    // controllo tag duplicato nel frame
+    if (db_query($pdo,
+        'SELECT id_tag FROM tags WHERE id_frame = ? AND id_hardware = ? LIMIT 1',
+        [$idFrame, $idHardware]
+    )->fetch()) {
         $pdo->rollBack();
         send_json(false, 'Questo hardware e gia taggato nel frame.', 409);
     }
 
-    $insertTagStmt = $pdo->prepare(
-        'INSERT INTO TAGS (id_frame, id_hardware, id_utente, coord_x, coord_y)
-         VALUES (?, ?, ?, ?, ?)'
+    // inserisco il tag con le coordinate in percentuale
+    db_query($pdo,
+        'INSERT INTO tags (id_frame, id_hardware, id_utente, coord_x, coord_y)
+         VALUES (?, ?, ?, ?, ?)',
+        [$idFrame, $idHardware, $idUtente, $coordX, $coordY]
     );
-    $insertTagStmt->execute([$idFrame, $idHardware, $idUtente, $coordX, $coordY]);
     $idTag = (int) $pdo->lastInsertId();
 
     $pdo->commit();
 
     send_json(true, 'Tag salvato.', 201, [
-        'id_tag' => $idTag,
+        'id_tag'      => $idTag,
         'id_hardware' => (int) $idHardware,
     ]);
 } catch (PDOException $e) {

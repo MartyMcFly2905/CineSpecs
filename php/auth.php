@@ -1,20 +1,13 @@
 <?php
+// Gestione autenticazione: register, login, logout
 require __DIR__ . '/config.php';
 
 session_start();
 
 header('Content-Type: application/json; charset=utf-8');
 
-function send_json($success, $message, $statusCode)
-{
-    http_response_code($statusCode);
-    echo json_encode([
-        'success' => $success,
-        'message' => $message,
-    ]);
-    exit;
-}
 
+// Legge e pulisce i campi POST
 function get_post_value($key)
 {
     $value = filter_input(INPUT_POST, $key, FILTER_DEFAULT);
@@ -66,25 +59,21 @@ try {
             send_json(false, 'Email non valida.', 400);
         }
 
-        $checkStmt = $pdo->prepare(
-            'SELECT id_utente
-             FROM UTENTI
-             WHERE username = ? OR email = ?
-             LIMIT 1'
-        );
-        $checkStmt->execute([$username, $email]);
-
-        if ($checkStmt->fetch()) {
+        // Controlla se username o email esistono gia
+        if (db_query($pdo,
+            'SELECT id_utente FROM utenti WHERE username = ? OR email = ? LIMIT 1',
+            [$username, $email]
+        )->fetch()) {
             send_json(false, 'Username o email gia in uso.', 409);
         }
 
+        // Hash della password
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        $insertStmt = $pdo->prepare(
-            'INSERT INTO UTENTI (username, email, password_hash, ruolo)
-             VALUES (?, ?, ?, ?)'
+        db_query($pdo,
+            'INSERT INTO utenti (username, email, password_hash, ruolo) VALUES (?, ?, ?, ?)',
+            [$username, $email, $passwordHash, 'contributor']
         );
-        $insertStmt->execute([$username, $email, $passwordHash, 'contributor']);
 
         send_json(true, 'Registrazione completata.', 201);
     }
@@ -101,19 +90,17 @@ try {
             send_json(false, 'Password obbligatoria.', 400);
         }
 
-        $stmt = $pdo->prepare(
-            'SELECT id_utente, username, password_hash, ruolo
-             FROM UTENTI
-             WHERE username = ?
-             LIMIT 1'
-        );
-        $stmt->execute([$username]);
-        $user = $stmt->fetch();
+        $user = db_query($pdo,
+            'SELECT id_utente, username, password_hash, ruolo FROM utenti WHERE username = ? LIMIT 1',
+            [$username]
+        )->fetch();
 
+        // Verifica la password
         if (!$user || !password_verify($password, $user['password_hash'])) {
             send_json(false, 'Credenziali non valide.', 401);
         }
 
+        // Rigenera l'ID di sessione
         session_regenerate_id(true);
 
         $_SESSION['id_utente'] = (int) $user['id_utente'];
@@ -126,6 +113,7 @@ try {
     if ($action === 'logout') {
         $_SESSION = [];
 
+        // Cancella anche il cookie di sessione
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
             setcookie(

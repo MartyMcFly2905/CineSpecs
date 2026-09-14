@@ -1,4 +1,6 @@
 <?php
+// controller dashboard contributor (gestione film e frame)
+
 session_start();
 
 if (!isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
@@ -32,6 +34,8 @@ $frameData = [
     'descrizione_scena' => '',
 ];
 
+// funzioni di utilità e validazione
+
 function pulisciTesto(?string $value): string
 {
     return trim((string) $value);
@@ -48,6 +52,52 @@ function annoValido(string $value, int $currentYear): bool
     return $year >= 1888 && $year <= $currentYear;
 }
 
+function validaDatiFilm(array $dati, int $currentYear): array
+{
+    $errors = [];
+
+    if (($dati['titolo'] ?? '') === '') {
+        $errors[] = 'Inserisci il titolo del film.';
+    } elseif (mb_strlen($dati['titolo']) > 150) {
+        $errors[] = 'Il titolo del film e troppo lungo.';
+    }
+
+    if (!annoValido((string) ($dati['anno_uscita'] ?? ''), $currentYear)) {
+        $errors[] = 'Inserisci un anno di uscita valido.';
+    }
+
+    if (($dati['regista'] ?? '') === '') {
+        $errors[] = 'Inserisci il regista del film.';
+    } elseif (mb_strlen($dati['regista']) > 100) {
+        $errors[] = 'Il nome del regista e troppo lungo.';
+    }
+
+    if (($dati['sinossi'] ?? '') !== '' && mb_strlen($dati['sinossi']) > 200) {
+        $errors[] = 'La sinossi e troppo lunga (massimo 200 caratteri).';
+    }
+
+    return $errors;
+}
+
+function validaDatiFrame(array $dati): array
+{
+    $errors = [];
+
+    if (filter_var($dati['id_film'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+        $errors[] = 'Seleziona un film valido a cui associare il frame.';
+    }
+
+    if (normalizzaTimestamp((string) ($dati['timestamp_frame'] ?? '')) === '') {
+        $errors[] = 'Inserisci un timestamp valido nel formato HH:MM o HH:MM:SS.';
+    }
+
+    if (($dati['descrizione_scena'] ?? '') !== '' && mb_strlen($dati['descrizione_scena']) > 255) {
+        $errors[] = 'La descrizione del frame supera i 255 caratteri.';
+    }
+
+    return $errors;
+}
+
 function normalizzaTimestamp(string $value): string
 {
     $value = trim($value);
@@ -56,12 +106,8 @@ function normalizzaTimestamp(string $value): string
         return '';
     }
 
-    if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $value)) {
+    if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/', $value)) {
         return '';
-    }
-
-    if (strlen($value) === 5) {
-        return $value . ':00';
     }
 
     return $value;
@@ -133,6 +179,177 @@ function formDaAzione(string $action): string
     return '';
 }
 
+function trovaFilmDuplicato(PDO $pdo, string $titolo, int $annoUscita, string $regista, ?int $excludeFilmId = null): bool
+{
+    if ($excludeFilmId === null) {
+        $stmt = $pdo->prepare(
+            'SELECT id_film
+             FROM film
+             WHERE LOWER(titolo) = LOWER(?)
+               AND anno_uscita = ?
+               AND LOWER(regista) = LOWER(?)
+             LIMIT 1'
+        );
+        $stmt->execute([$titolo, $annoUscita, $regista]);
+    } else {
+        $stmt = $pdo->prepare(
+            'SELECT id_film
+             FROM film
+             WHERE LOWER(titolo) = LOWER(?)
+               AND anno_uscita = ?
+               AND LOWER(regista) = LOWER(?)
+               AND id_film <> ?
+             LIMIT 1'
+        );
+        $stmt->execute([$titolo, $annoUscita, $regista, $excludeFilmId]);
+    }
+
+    return (bool) $stmt->fetch();
+}
+
+function trovaFilmPerModifica(PDO $pdo, int $filmId, int $userId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT copertina_path
+         FROM film
+         WHERE id_film = ? AND id_utente_creatore = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$filmId, $userId]);
+
+    $film = $stmt->fetch();
+
+    return $film ?: null;
+}
+
+function trovaFilmPerId(PDO $pdo, int $filmId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT id_film, titolo
+         FROM film
+         WHERE id_film = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$filmId]);
+
+    $film = $stmt->fetch();
+
+    return $film ?: null;
+}
+
+function inserisciFilm(PDO $pdo, int $userId, array $filmData, ?string $coverPath): int
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO film (id_utente_creatore, titolo, anno_uscita, regista, sinossi, copertina_path)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        $userId,
+        $filmData['titolo'],
+        (int) $filmData['anno_uscita'],
+        $filmData['regista'],
+        $filmData['sinossi'] !== '' ? $filmData['sinossi'] : null,
+        $coverPath,
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+function aggiornaFilm(PDO $pdo, int $filmId, int $userId, array $filmData, ?string $coverPath): void
+{
+    $stmt = $pdo->prepare(
+        'UPDATE film
+         SET titolo = ?, anno_uscita = ?, regista = ?, sinossi = ?, copertina_path = ?
+         WHERE id_film = ? AND id_utente_creatore = ?'
+    );
+    $stmt->execute([
+        $filmData['titolo'],
+        (int) $filmData['anno_uscita'],
+        $filmData['regista'],
+        $filmData['sinossi'] !== '' ? $filmData['sinossi'] : null,
+        $coverPath,
+        $filmId,
+        $userId,
+    ]);
+}
+
+function trovaFrameDuplicato(PDO $pdo, int $filmId, string $timestampFrame, ?int $excludeFrameId = null): bool
+{
+    if ($excludeFrameId === null) {
+        $stmt = $pdo->prepare(
+            'SELECT id_frame
+             FROM frame
+             WHERE id_film = ?
+               AND timestamp_frame = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$filmId, $timestampFrame]);
+    } else {
+        $stmt = $pdo->prepare(
+            'SELECT id_frame
+             FROM frame
+             WHERE id_film = ?
+               AND timestamp_frame = ?
+               AND id_frame <> ?
+             LIMIT 1'
+        );
+        $stmt->execute([$filmId, $timestampFrame, $excludeFrameId]);
+    }
+
+    return (bool) $stmt->fetch();
+}
+
+function trovaFramePerModifica(PDO $pdo, int $frameId, int $userId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT immagine_path
+         FROM frame
+         WHERE id_frame = ? AND id_utente_creatore = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$frameId, $userId]);
+
+    $frame = $stmt->fetch();
+
+    return $frame ?: null;
+}
+
+function inserisciFrame(PDO $pdo, int $filmId, int $userId, string $framePath, string $timestampFrame, ?string $descrizioneScena): int
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO frame (id_film, id_utente_creatore, immagine_path, timestamp_frame, descrizione_scena)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        $filmId,
+        $userId,
+        $framePath,
+        $timestampFrame,
+        $descrizioneScena !== '' ? $descrizioneScena : null,
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+function aggiornaFrame(PDO $pdo, int $frameId, int $userId, int $filmId, string $framePath, string $timestampFrame, ?string $descrizioneScena): void
+{
+    $stmt = $pdo->prepare(
+        'UPDATE frame
+         SET id_film = ?, immagine_path = ?, timestamp_frame = ?, descrizione_scena = ?
+         WHERE id_frame = ? AND id_utente_creatore = ?'
+    );
+    $stmt->execute([
+        $filmId,
+        $framePath,
+        $timestampFrame,
+        $descrizioneScena !== '' ? $descrizioneScena : null,
+        $frameId,
+        $userId,
+    ]);
+}
+
+// gestione form in post (creazione / modifica)
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $errors = [];
@@ -144,43 +361,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filmData['anno_uscita'] = pulisciTesto($_POST['anno_uscita'] ?? '');
             $filmData['regista'] = pulisciTesto($_POST['regista'] ?? '');
             $filmData['sinossi'] = pulisciTesto($_POST['sinossi'] ?? '');
-
-            if ($filmData['titolo'] === '') {
-                $errors[] = 'Inserisci il titolo del film.';
-            } elseif (mb_strlen($filmData['titolo']) > 150) {
-                $errors[] = 'Il titolo del film e troppo lungo.';
-            }
-
-            if (!annoValido($filmData['anno_uscita'], $currentYear)) {
-                $errors[] = 'Inserisci un anno di uscita valido.';
-            }
-
-            if ($filmData['regista'] === '') {
-                $errors[] = 'Inserisci il regista del film.';
-            } elseif (mb_strlen($filmData['regista']) > 100) {
-                $errors[] = 'Il nome del regista e troppo lungo.';
-            }
-
-            if ($filmData['sinossi'] !== '' && mb_strlen($filmData['sinossi']) > 4000) {
-                $errors[] = 'La sinossi e troppo lunga.';
-            }
+            $errors = array_merge($errors, validaDatiFilm($filmData, $currentYear));
 
             if (!$errors) {
-                $duplicateStmt = $pdo->prepare(
-                    'SELECT id_film
-                     FROM FILM
-                     WHERE LOWER(titolo) = LOWER(?)
-                       AND anno_uscita = ?
-                       AND LOWER(regista) = LOWER(?)
-                     LIMIT 1'
-                );
-                $duplicateStmt->execute([
-                    $filmData['titolo'],
-                    (int) $filmData['anno_uscita'],
-                    $filmData['regista'],
-                ]);
-
-                if ($duplicateStmt->fetch()) {
+                if (trovaFilmDuplicato($pdo, $filmData['titolo'], (int) $filmData['anno_uscita'], $filmData['regista'])) {
                     $errors[] = 'Questo film e gia presente nel catalogo.';
                 }
             }
@@ -192,18 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $insertFilm = $pdo->prepare(
-                    'INSERT INTO FILM (id_utente_creatore, titolo, anno_uscita, regista, sinossi, copertina_path)
-                     VALUES (?, ?, ?, ?, ?, ?)'
-                );
-                $insertFilm->execute([
-                    $userId,
-                    $filmData['titolo'],
-                    (int) $filmData['anno_uscita'],
-                    $filmData['regista'],
-                    $filmData['sinossi'] !== '' ? $filmData['sinossi'] : null,
-                    $coverPath,
-                ]);
+                inserisciFilm($pdo, $userId, $filmData, $coverPath);
 
                 header('Location: dashboard.php?success=film&tab=create_film');
                 exit;
@@ -216,42 +389,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filmData['anno_uscita'] = pulisciTesto($_POST['anno_uscita'] ?? '');
             $filmData['regista'] = pulisciTesto($_POST['regista'] ?? '');
             $filmData['sinossi'] = pulisciTesto($_POST['sinossi'] ?? '');
-
             if (!$editFilmId) {
                 $errors[] = 'Film da modificare non valido.';
             }
 
-            if ($filmData['titolo'] === '') {
-                $errors[] = 'Inserisci il titolo del film.';
-            } elseif (mb_strlen($filmData['titolo']) > 150) {
-                $errors[] = 'Il titolo del film e troppo lungo.';
-            }
-
-            if (!annoValido($filmData['anno_uscita'], $currentYear)) {
-                $errors[] = 'Inserisci un anno di uscita valido.';
-            }
-
-            if ($filmData['regista'] === '') {
-                $errors[] = 'Inserisci il regista del film.';
-            } elseif (mb_strlen($filmData['regista']) > 100) {
-                $errors[] = 'Il nome del regista e troppo lungo.';
-            }
-
-            if ($filmData['sinossi'] !== '' && mb_strlen($filmData['sinossi']) > 4000) {
-                $errors[] = 'La sinossi e troppo lunga.';
-            }
+            $errors = array_merge($errors, validaDatiFilm($filmData, $currentYear));
 
             $currentCoverPath = null;
 
             if (!$errors) {
-                $filmStmt = $pdo->prepare(
-                    'SELECT copertina_path
-                     FROM FILM
-                     WHERE id_film = ? AND id_utente_creatore = ?
-                     LIMIT 1'
-                );
-                $filmStmt->execute([$editFilmId, $userId]);
-                $filmRow = $filmStmt->fetch();
+                $filmRow = trovaFilmPerModifica($pdo, $editFilmId, $userId);
 
                 if (!$filmRow) {
                     $errors[] = 'Film non trovato o non autorizzato.';
@@ -261,23 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $duplicateStmt = $pdo->prepare(
-                    'SELECT id_film
-                     FROM FILM
-                     WHERE LOWER(titolo) = LOWER(?)
-                       AND anno_uscita = ?
-                       AND LOWER(regista) = LOWER(?)
-                       AND id_film <> ?
-                     LIMIT 1'
-                );
-                $duplicateStmt->execute([
-                    $filmData['titolo'],
-                    (int) $filmData['anno_uscita'],
-                    $filmData['regista'],
-                    $editFilmId,
-                ]);
-
-                if ($duplicateStmt->fetch()) {
+                if (trovaFilmDuplicato($pdo, $filmData['titolo'], (int) $filmData['anno_uscita'], $filmData['regista'], $editFilmId)) {
                     $errors[] = 'Questo film e gia presente nel catalogo.';
                 }
             }
@@ -293,20 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $updateFilm = $pdo->prepare(
-                    'UPDATE FILM
-                     SET titolo = ?, anno_uscita = ?, regista = ?, sinossi = ?, copertina_path = ?
-                     WHERE id_film = ? AND id_utente_creatore = ?'
-                );
-                $updateFilm->execute([
-                    $filmData['titolo'],
-                    (int) $filmData['anno_uscita'],
-                    $filmData['regista'],
-                    $filmData['sinossi'] !== '' ? $filmData['sinossi'] : null,
-                    $coverPath,
-                    $editFilmId,
-                    $userId,
-                ]);
+                aggiornaFilm($pdo, $editFilmId, $userId, $filmData, $coverPath);
 
                 header('Location: dashboard.php?success=film_updated&tab=create_film');
                 exit;
@@ -316,28 +434,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $frameData['timestamp_frame'] = pulisciTesto($_POST['timestamp_frame'] ?? '');
             $frameData['descrizione_scena'] = pulisciTesto($_POST['descrizione_scena'] ?? '');
 
+            $errors = array_merge($errors, validaDatiFrame($frameData));
+
             $filmId = filter_var($frameData['id_film'], FILTER_VALIDATE_INT, [
                 'options' => ['min_range' => 1],
             ]);
 
-            if ($filmId === false) {
-                $errors[] = 'Seleziona un film valido a cui associare il frame.';
-            }
-
             $timestampNormalizzato = normalizzaTimestamp($frameData['timestamp_frame']);
 
-            if ($timestampNormalizzato === '') {
-                $errors[] = 'Inserisci un timestamp valido nel formato HH:MM o HH:MM:SS.';
-            }
-
-            if ($frameData['descrizione_scena'] !== '' && mb_strlen($frameData['descrizione_scena']) > 255) {
-                $errors[] = 'La descrizione del frame supera i 255 caratteri.';
-            }
-
             if (!$errors) {
-                $filmStmt = $pdo->prepare('SELECT id_film, titolo FROM FILM WHERE id_film = ? LIMIT 1');
-                $filmStmt->execute([$filmId]);
-                $selectedFilm = $filmStmt->fetch();
+                $selectedFilm = trovaFilmPerId($pdo, (int) $filmId);
 
                 if (!$selectedFilm) {
                     $errors[] = 'Il film selezionato non esiste piu nel database.';
@@ -345,16 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $duplicateFrameStmt = $pdo->prepare(
-                    'SELECT id_frame
-                     FROM FRAME
-                     WHERE id_film = ?
-                       AND timestamp_frame = ?
-                     LIMIT 1'
-                );
-                $duplicateFrameStmt->execute([$filmId, $timestampNormalizzato]);
-
-                if ($duplicateFrameStmt->fetch()) {
+                if (trovaFrameDuplicato($pdo, (int) $filmId, $timestampNormalizzato)) {
                     $errors[] = 'Esiste gia un frame per questo film con lo stesso timestamp.';
                 }
             }
@@ -366,17 +463,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $insertFrame = $pdo->prepare(
-                    'INSERT INTO FRAME (id_film, id_utente_creatore, immagine_path, timestamp_frame, descrizione_scena)
-                     VALUES (?, ?, ?, ?, ?)'
-                );
-                $insertFrame->execute([
-                    $filmId,
-                    $userId,
-                    $framePath,
-                    $timestampNormalizzato,
-                    $frameData['descrizione_scena'] !== '' ? $frameData['descrizione_scena'] : null,
-                ]);
+                inserisciFrame($pdo, (int) $filmId, $userId, $framePath, $timestampNormalizzato, $frameData['descrizione_scena']);
 
                 header('Location: dashboard.php?success=frame&tab=create_frame');
                 exit;
@@ -393,35 +480,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Frame da modificare non valido.';
             }
 
+            $errors = array_merge($errors, validaDatiFrame($frameData));
+
             $filmId = filter_var($frameData['id_film'], FILTER_VALIDATE_INT, [
                 'options' => ['min_range' => 1],
             ]);
 
-            if ($filmId === false) {
-                $errors[] = 'Seleziona un film valido a cui associare il frame.';
-            }
-
             $timestampNormalizzato = normalizzaTimestamp($frameData['timestamp_frame']);
-
-            if ($timestampNormalizzato === '') {
-                $errors[] = 'Inserisci un timestamp valido nel formato HH:MM o HH:MM:SS.';
-            }
-
-            if ($frameData['descrizione_scena'] !== '' && mb_strlen($frameData['descrizione_scena']) > 255) {
-                $errors[] = 'La descrizione del frame supera i 255 caratteri.';
-            }
 
             $currentFramePath = null;
 
             if (!$errors) {
-                $currentFrameStmt = $pdo->prepare(
-                    'SELECT immagine_path
-                     FROM FRAME
-                     WHERE id_frame = ? AND id_utente_creatore = ?
-                     LIMIT 1'
-                );
-                $currentFrameStmt->execute([$editFrameId, $userId]);
-                $currentFrame = $currentFrameStmt->fetch();
+                $currentFrame = trovaFramePerModifica($pdo, $editFrameId, $userId);
 
                 if (!$currentFrame) {
                     $errors[] = 'Frame non trovato o non autorizzato.';
@@ -431,9 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $filmStmt = $pdo->prepare('SELECT id_film, titolo FROM FILM WHERE id_film = ? LIMIT 1');
-                $filmStmt->execute([$filmId]);
-                $selectedFilm = $filmStmt->fetch();
+                $selectedFilm = trovaFilmPerId($pdo, (int) $filmId);
 
                 if (!$selectedFilm) {
                     $errors[] = 'Il film selezionato non esiste piu nel database.';
@@ -441,17 +509,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $duplicateFrameStmt = $pdo->prepare(
-                    'SELECT id_frame
-                     FROM FRAME
-                     WHERE id_film = ?
-                       AND timestamp_frame = ?
-                       AND id_frame <> ?
-                     LIMIT 1'
-                );
-                $duplicateFrameStmt->execute([$filmId, $timestampNormalizzato, $editFrameId]);
-
-                if ($duplicateFrameStmt->fetch()) {
+                if (trovaFrameDuplicato($pdo, (int) $filmId, $timestampNormalizzato, $editFrameId)) {
                     $errors[] = 'Esiste gia un frame per questo film con lo stesso timestamp.';
                 }
             }
@@ -467,19 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$errors) {
-                $updateFrame = $pdo->prepare(
-                    'UPDATE FRAME
-                     SET id_film = ?, immagine_path = ?, timestamp_frame = ?, descrizione_scena = ?
-                     WHERE id_frame = ? AND id_utente_creatore = ?'
-                );
-                $updateFrame->execute([
-                    $filmId,
-                    $framePath,
-                    $timestampNormalizzato,
-                    $frameData['descrizione_scena'] !== '' ? $frameData['descrizione_scena'] : null,
-                    $editFrameId,
-                    $userId,
-                ]);
+                aggiornaFrame($pdo, $editFrameId, $userId, (int) $filmId, $framePath, $timestampNormalizzato, $frameData['descrizione_scena']);
 
                 header('Location: dashboard.php?success=frame_updated&tab=create_frame');
                 exit;
@@ -527,6 +573,8 @@ $allowedTabs = [
 $requestedEditFilm = null;
 $requestedEditFrame = null;
 
+// se in get ci sono id da modificare carico i dati per i form
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $requestedEditFilm = filter_input(INPUT_GET, 'edit_film', FILTER_VALIDATE_INT, [
         'options' => ['min_range' => 1],
@@ -539,7 +587,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         if ($requestedEditFilm) {
             $filmStmt = $pdo->prepare(
                 'SELECT titolo, anno_uscita, regista, sinossi
-                 FROM FILM
+                 FROM film
                  WHERE id_film = ? AND id_utente_creatore = ?
                  LIMIT 1'
             );
@@ -562,7 +610,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         } elseif ($requestedEditFrame) {
             $frameStmt = $pdo->prepare(
                 'SELECT id_film, timestamp_frame, descrizione_scena
-                 FROM FRAME
+                 FROM frame
                  WHERE id_frame = ? AND id_utente_creatore = ?
                  LIMIT 1'
             );
@@ -609,18 +657,20 @@ $stats = [
     'tag' => 0,
 ];
 
+// dati per le select e statistiche personali
+
 try {
     $filmListStmt = $pdo->query(
         'SELECT id_film, titolo, anno_uscita, regista
-         FROM FILM
+         FROM film
          ORDER BY titolo ASC, anno_uscita DESC'
     );
     $filmsForSelect = $filmListStmt->fetchAll();
 
     $statsQueries = [
-        'film' => 'SELECT COUNT(*) FROM FILM WHERE id_utente_creatore = ?',
-        'frame' => 'SELECT COUNT(*) FROM FRAME WHERE id_utente_creatore = ?',
-        'tag' => 'SELECT COUNT(*) FROM TAGS WHERE id_utente = ?',
+        'film' => 'SELECT COUNT(*) FROM film WHERE id_utente_creatore = ?',
+        'frame' => 'SELECT COUNT(*) FROM frame WHERE id_utente_creatore = ?',
+        'tag' => 'SELECT COUNT(*) FROM tags WHERE id_utente = ?',
     ];
 
     foreach ($statsQueries as $key => $query) {
@@ -636,256 +686,4 @@ try {
         $feedbackMessage = 'Impossibile caricare tutti i dati della dashboard.';
     }
 }
-?>
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard contributor · CineSpecs</title>
-    <script src="../js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-init.js'); ?>"></script>
-    <link rel="stylesheet" href="../css/style.css?v=<?php echo filemtime(__DIR__ . '/../css/style.css'); ?>">
-    <link rel="stylesheet" href="../css/layout.css?v=<?php echo filemtime(__DIR__ . '/../css/layout.css'); ?>">
-</head>
-<body>
-<header class="site-header">
-    <div class="container header-inner">
-        <a href="../index.php" class="brand">
-            <img
-                src="../assets/icons/logo.png"
-                alt="CineSpecs"
-                class="brand-logo"
-                id="brand-logo"
-                data-light-logo="../assets/icons/logo_dark.png"
-                data-dark-logo="../assets/icons/logo.png"
-            >
-            <span class="visually-hidden">CineSpecs</span>
-        </a>
-        <div class="header-actions">
-            <p class="header-meta">Area contributor</p>
-            <div class="header-auth">
-                <span class="header-user">Ciao, <?php echo $sessionUsername; ?></span>
-                <nav class="header-auth-pill" aria-label="Azioni account">
-                    <a href="dashboard.php" aria-current="page">Dashboard</a>
-                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                        <a href="admin.php">Admin</a>
-                    <?php endif; ?>
-                    <a href="logout.php">Logout</a>
-                </nav>
-            </div>
-            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
-        </div>
-    </div>
-</header>
-
-<main>
-    <div class="container">
-        <section class="search-panel dashboard-hero" aria-labelledby="dashboard-title">
-            <div class="grid-heading">
-                <h1 id="dashboard-title">Dashboard contributor</h1>
-            </div>
-            <p class="dashboard-note">Qui puoi preparare il catalogo con film e frame. I tag e i prop si aggiungono dal frame viewer in modalita ispezione.</p>
-        </section>
-
-        <section class="dashboard-stats" aria-label="Statistiche contributi">
-            <button
-                type="button"
-                class="dashboard-stat dashboard-stat--button"
-                data-content-action="list_my_films"
-                aria-controls="my-content-panel"
-            >
-                <span class="dashboard-stat__label">Film personali</span>
-                <strong class="dashboard-stat__value"><?php echo $stats['film']; ?></strong>
-            </button>
-            <button
-                type="button"
-                class="dashboard-stat dashboard-stat--button"
-                data-content-action="list_my_frames"
-                aria-controls="my-content-panel"
-            >
-                <span class="dashboard-stat__label">Frame personali</span>
-                <strong class="dashboard-stat__value"><?php echo $stats['frame']; ?></strong>
-            </button>
-            <button
-                type="button"
-                class="dashboard-stat dashboard-stat--button"
-                data-content-action="list_my_tags"
-                aria-controls="my-content-panel"
-            >
-                <span class="dashboard-stat__label">Tag personali</span>
-                <strong class="dashboard-stat__value"><?php echo $stats['tag']; ?></strong>
-            </button>
-        </section>
-
-        <?php if ($feedbackMessage !== ''): ?>
-            <p class="dashboard-feedback dashboard-feedback--<?php echo htmlspecialchars($feedbackType, ENT_QUOTES, 'UTF-8'); ?>" aria-live="polite">
-                <?php echo htmlspecialchars($feedbackMessage, ENT_QUOTES, 'UTF-8'); ?>
-            </p>
-        <?php endif; ?>
-
-        <section class="search-panel my-content-panel" id="my-content-panel" aria-labelledby="my-content-title">
-            <div class="grid-heading">
-                <div>
-                    <h2 id="my-content-title">I miei contenuti</h2>
-                    <p id="my-content-status" aria-live="polite">Seleziona una pillola per vedere l'elenco.</p>
-                </div>
-            </div>
-            <div id="my-content-list" class="my-content-list" data-current-action=""></div>
-        </section>
-
-        <section class="dashboard-switcher" aria-label="Scegli contenuto da inserire">
-            <button
-                type="button"
-                class="dashboard-switcher__button<?php echo $activePanel === 'create_film' ? ' dashboard-switcher__button--active' : ''; ?>"
-                data-dashboard-target="create_film"
-                aria-pressed="<?php echo $activePanel === 'create_film' ? 'true' : 'false'; ?>"
-            >
-                <?php echo $isEditingFilm ? 'Modifica film' : 'Nuovo film'; ?>
-            </button>
-            <button
-                type="button"
-                class="dashboard-switcher__button<?php echo $activePanel === 'create_frame' ? ' dashboard-switcher__button--active' : ''; ?>"
-                data-dashboard-target="create_frame"
-                aria-pressed="<?php echo $activePanel === 'create_frame' ? 'true' : 'false'; ?>"
-            >
-                <?php echo $isEditingFrame ? 'Modifica frame' : 'Nuovo frame'; ?>
-            </button>
-        </section>
-
-        <section class="dashboard-panels" aria-label="Form contributor" data-dashboard-active="<?php echo htmlspecialchars($activePanel, ENT_QUOTES, 'UTF-8'); ?>">
-            <section
-                class="search-panel contributor-card dashboard-panel<?php echo $activePanel === 'create_film' ? ' dashboard-panel--active' : ''; ?>"
-                aria-labelledby="film-form-title"
-                data-dashboard-panel="create_film"
-                <?php echo $activePanel === 'create_film' ? '' : 'hidden'; ?>
-            >
-                <div class="grid-heading contributor-card__heading">
-                    <h2 id="film-form-title"><?php echo $isEditingFilm ? 'Modifica film' : 'Nuovo film'; ?></h2>
-                    <p><?php echo $isEditingFilm ? 'Aggiorna i dati del film senza perdere i frame collegati' : 'Controllo duplicati su titolo, anno e regista'; ?></p>
-                </div>
-                <form
-                    id="film-form"
-                    class="contributor-form"
-                    method="post"
-                    action="dashboard.php"
-                    enctype="multipart/form-data"
-                    novalidate
-                >
-                    <input type="hidden" name="action" value="<?php echo $isEditingFilm ? 'update_film' : 'create_film'; ?>">
-                    <?php if ($isEditingFilm): ?>
-                        <input type="hidden" name="id_film" value="<?php echo (int) $editFilmId; ?>">
-                    <?php endif; ?>
-
-                    <div class="field-group">
-                        <label for="film-title">Titolo</label>
-                        <input type="text" name="titolo" id="film-title" maxlength="150" required value="<?php echo htmlspecialchars($filmData['titolo'], ENT_QUOTES, 'UTF-8'); ?>">
-                    </div>
-
-                    <div class="field-group">
-                        <label for="film-year">Anno di uscita</label>
-                        <input type="number" name="anno_uscita" id="film-year" min="1888" max="<?php echo $currentYear; ?>" required value="<?php echo htmlspecialchars($filmData['anno_uscita'], ENT_QUOTES, 'UTF-8'); ?>">
-                    </div>
-
-                    <div class="field-group field-group--full">
-                        <label for="film-director">Regista</label>
-                        <input type="text" name="regista" id="film-director" maxlength="100" required value="<?php echo htmlspecialchars($filmData['regista'], ENT_QUOTES, 'UTF-8'); ?>">
-                    </div>
-
-                    <div class="field-group field-group--full">
-                        <label for="film-cover">Copertina</label>
-                        <input type="file" name="copertina" id="film-cover" accept=".jpg,.jpeg,.png,.webp">
-                        <?php if ($isEditingFilm): ?>
-                            <p class="field-help">Lascia vuoto per mantenere la copertina attuale.</p>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="field-group field-group--full">
-                        <label for="film-synopsis">Sinossi</label>
-                        <textarea name="sinossi" id="film-synopsis" rows="5"><?php echo htmlspecialchars($filmData['sinossi'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-                    </div>
-
-                    <div class="field-group field-group--full contributor-actions">
-                        <button type="submit"><?php echo $isEditingFilm ? 'Aggiorna film' : 'Salva film'; ?></button>
-                        <?php if ($isEditingFilm): ?>
-                            <a class="contributor-cancel-link" href="dashboard.php?tab=create_film">Annulla modifica</a>
-                        <?php endif; ?>
-                    </div>
-                </form>
-            </section>
-
-            <section
-                class="search-panel contributor-card contributor-card--wide dashboard-panel<?php echo $activePanel === 'create_frame' ? ' dashboard-panel--active' : ''; ?>"
-                aria-labelledby="frame-form-title"
-                data-dashboard-panel="create_frame"
-                <?php echo $activePanel === 'create_frame' ? '' : 'hidden'; ?>
-            >
-                <div class="grid-heading contributor-card__heading">
-                    <h2 id="frame-form-title"><?php echo $isEditingFrame ? 'Modifica frame' : 'Nuovo frame'; ?></h2>
-                    <p><?php echo $isEditingFrame ? 'Aggiorna timestamp, descrizione o immagine senza eliminare i tag collegati' : 'Associato a un film gia presente nel database'; ?></p>
-                </div>
-
-                <?php if (!$filmsForSelect): ?>
-                    <div class="empty-state">Prima inserisci almeno un film, poi potrai caricare un frame associato.</div>
-                <?php else: ?>
-                    <form
-                        id="frame-form"
-                        class="contributor-form"
-                        method="post"
-                        action="dashboard.php"
-                        enctype="multipart/form-data"
-                        novalidate
-                    >
-                        <input type="hidden" name="action" value="<?php echo $isEditingFrame ? 'update_frame' : 'create_frame'; ?>">
-                        <?php if ($isEditingFrame): ?>
-                            <input type="hidden" name="id_frame" value="<?php echo (int) $editFrameId; ?>">
-                        <?php endif; ?>
-
-                        <div class="field-group field-group--full">
-                            <label for="frame-film">Film</label>
-                            <select name="id_film" id="frame-film" required>
-                                <option value="">Seleziona un film esistente</option>
-                                <?php foreach ($filmsForSelect as $film): ?>
-                                    <option value="<?php echo (int) $film['id_film']; ?>" <?php echo ((int) $frameData['id_film'] === (int) $film['id_film']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>
-                                        (<?php echo (int) $film['anno_uscita']; ?>)
-                                        · <?php echo htmlspecialchars($film['regista'], ENT_QUOTES, 'UTF-8'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="field-group">
-                            <label for="frame-timestamp">Timestamp</label>
-                            <input type="time" name="timestamp_frame" id="frame-timestamp" step="1" required value="<?php echo htmlspecialchars($frameData['timestamp_frame'], ENT_QUOTES, 'UTF-8'); ?>">
-                        </div>
-
-                        <div class="field-group">
-                            <label for="frame-image">Immagine frame</label>
-                            <input type="file" name="immagine_frame" id="frame-image" accept=".jpg,.jpeg,.png,.webp" <?php echo $isEditingFrame ? '' : 'required'; ?>>
-                            <?php if ($isEditingFrame): ?>
-                                <p class="field-help">Lascia vuoto per mantenere l'immagine attuale.</p>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="field-group field-group--full">
-                            <label for="frame-description">Descrizione scena</label>
-                            <textarea name="descrizione_scena" id="frame-description" rows="4" maxlength="255"><?php echo htmlspecialchars($frameData['descrizione_scena'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-                        </div>
-
-                        <div class="field-group field-group--full contributor-actions">
-                            <button type="submit"><?php echo $isEditingFrame ? 'Aggiorna frame' : 'Salva frame'; ?></button>
-                            <?php if ($isEditingFrame): ?>
-                                <a class="contributor-cancel-link" href="dashboard.php?tab=create_frame">Annulla modifica</a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                <?php endif; ?>
-            </section>
-        </section>
-    </div>
-</main>
-
-<script src="../js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-toggle.js'); ?>"></script>
-<script src="../js/validation.js?v=<?php echo filemtime(__DIR__ . '/../js/validation.js'); ?>"></script>
-</body>
-</html>
+require __DIR__ . '/dashboard_template.php';

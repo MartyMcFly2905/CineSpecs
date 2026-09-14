@@ -1,8 +1,10 @@
 <?php
+// Logout e redirect alla home
 session_start();
 
 $_SESSION = [];
 
+// Cancella anche il cookie di sessione
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
     setcookie(

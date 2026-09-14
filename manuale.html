@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manuale utente · CineSpecs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <script src="js/theme-init.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container header-inner">
+        <a href="index.php" class="brand">
+            <img
+                src="assets/icons/logo.png"
+                alt="CineSpecs"
+                class="brand-logo"
+                id="brand-logo"
+                data-light-logo="assets/icons/logo_dark.png"
+                data-dark-logo="assets/icons/logo.png"
+            >
+            <h1 class="visually-hidden">CineSpecs</h1>
+        </a>
+        <div class="header-actions">
+            <a href="index.php" class="theme-toggle">Catalogo</a>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Tema scuro</button>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="container">
+
+        <section class="search-panel manuale-section-first" aria-labelledby="manuale-titolo">
+            <div class="grid-heading">
+                <h2 id="manuale-titolo">Cos'è CineSpecs?</h2>
+            </div>
+            <p>
+                CineSpecs è un archivio interattivo che raccoglie informazioni sull'hardware reale o fittizio
+                che compare nei film: computer, videocamere, dispositivi futuristici e molto altro.
+                Chiunque può sfogliare il catalogo e scoprire che oggetto tecnologico viene mostrato in una
+                scena, chi lo ha identificato e quanti utenti lo hanno apprezzato.
+            </p>
+        </section>
+
+        <section aria-labelledby="sezione-sfogliare">
+            <div class="grid-heading">
+                <h2 id="sezione-sfogliare">Sfogliare il catalogo</h2>
+            </div>
+            <p>
+                Nella pagina principale è visibile l'elenco dei film presenti nell'archivio.
+                È possibile filtrare i risultati digitando il titolo del film nel campo di ricerca oppure
+                scegliendo un anno dal menu a tendina, poi premendo il pulsante <strong>Aggiorna catalogo</strong>.
+                Per ogni film è indicato il titolo, il regista, l'anno di uscita e l'utente che lo ha inserito, facendo
+                hover è visualizzabile un riassunto opzionale.
+            </p>
+        </section>
+
+        <section aria-labelledby="sezione-viewer">
+            <div class="grid-heading">
+                <h2 id="sezione-viewer">Il frame viewer</h2>
+            </div>
+            <p>
+                Cliccando su <strong>Apri frame</strong> in una scheda film si accede al visualizzatore di fotogrammi.
+                In alto appare il fotogramma principale del film, con sopra dei piccoli marcatori colorati chiamati
+                <strong>Pulse-Tag</strong>: ognuno indica un oggetto tecnologico visibile nella scena.
+                Cliccando su un Pulse-Tag, nella colonna a destra compare la scheda dell'oggetto, con nome,
+                produttore, anno, descrizione e curiosità. È possibile esprimere un giudizio positivo o negativo
+                su ciascun tag e su ciascun fotogramma tramite i tasti con le frecce ▲ e ▼.
+                In basso è presente la <strong>timeline</strong>: cliccando su una miniatura si passa al
+                fotogramma corrispondente.
+            </p>
+        </section>
+
+        <section aria-labelledby="sezione-account">
+            <div class="grid-heading">
+                <h2 id="sezione-account">Registrarsi e accedere</h2>
+            </div>
+            <p>
+                Per contribuire all'archivio è necessario creare un account gratuito.
+                Dal menu in alto a destra, cliccando su <strong>Login</strong>, si trovano i link per
+                accedere con un account esistente oppure per registrarsi indicando nome utente, indirizzo
+                e-mail e una password di almeno 8 caratteri. Una volta effettuato l'accesso, il nome utente
+                comparirà in cima alla pagina insieme ai collegamenti alla dashboard e al logout.
+            </p>
+            <p>
+                <strong>Credenziali di prova disponibili:</strong><br>
+                Amministratore — username: <em>admin</em> · password: <em>password</em><br>
+                Contributors — usernames: <em>contributor1/2</em> · password: <em>password</em>
+            </p>
+        </section>
+
+        <section aria-labelledby="sezione-contribuire">
+            <div class="grid-heading">
+                <h2 id="sezione-contribuire">Aggiungere contenuti</h2>
+            </div>
+            <p>
+                Dopo aver effettuato l'accesso è possibile accedere alla <strong>dashboard personale</strong>,
+                raggiungibile dal link in alto. Da lì si può inserire un nuovo film compilando titolo, anno,
+                regista e, facoltativamente, una breve sinossi e una locandina. Si può inoltre aggiungere
+                un nuovo fotogramma scegliendo il film di riferimento, indicando il minuto e il secondo in
+                cui compare nella pellicola e caricando l'immagine del fotogramma.
+            </p>
+            <p>
+                Per aggiungere un <strong>Pulse-Tag</strong> su un fotogramma, aprire il viewer e premere il
+                pulsante <strong>Aggiungi tag</strong>. Cliccare sul punto dell'immagine dove si trova
+                l'oggetto: si aprirà un modulo nella colonna a destra dove scegliere l'hardware dall'elenco
+                o inserirne uno nuovo, poi premere <strong>Salva tag</strong> per confermare.
+            </p>
+            <p>
+                Dalla dashboard è anche possibile modificare o eliminare i propri film e fotogrammi,
+                e consultare l'elenco dei propri contributi con il relativo punteggio ricevuto dagli altri utenti.
+            </p>
+        </section>
+
+        <section aria-labelledby="sezione-admin">
+            <div class="grid-heading">
+                <h2 id="sezione-admin">Pannello di moderazione</h2>
+            </div>
+            <p>
+                Gli utenti con ruolo di amministratore hanno accesso a un pannello dedicato, raggiungibile
+                dal link <strong>Admin</strong> in alto. Da qui è possibile visualizzare tutti i film,
+                fotogrammi e tag presenti nell'archivio, ordinati e navigabili a pagine, e rimuovere
+                eventuali contenuti non appropriati indipendentemente da chi li ha inseriti.
+            </p>
+        </section>
+
+        <p class="manuale-back-link">
+            <a href="index.php">← Torna al catalogo</a>
+        </p>
+
+    </div>
+</main>
+
+<script src="js/theme-toggle.js"></script>
+
+</body>
+</html>

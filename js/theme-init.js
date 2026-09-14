@@ -1,3 +1,4 @@
+// imposta il tema salvato all'avvio
 (function () {
     let savedTheme = '';
 

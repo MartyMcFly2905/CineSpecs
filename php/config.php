@@ -1,12 +1,12 @@
 <?php
+// Connessione al DB e funzioni utili
 
-// Configurazione database
+// Parametri DB
 $dbHost = '127.0.0.1';
-$dbName = 'cinespecs';
+$dbName = 'cantavenera_673569';
 $dbUser = 'root';
 $dbPass = '';
 
-// DSN
 $dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4";
 
 try {
@@ -18,4 +18,24 @@ try {
 } catch (PDOException $e) {
     error_log("Errore connessione DB: " . $e->getMessage());
     exit("Errore di connessione al database.");
+}
+
+// Helper per mandare risposte in JSON
+function send_json(bool $success, string $message, int $statusCode, array $data = []): void
+{
+    http_response_code($statusCode);
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data'    => $data,
+    ]);
+    exit;
+}
+
+// Helper per prepare ed execute in un colpo solo
+function db_query(PDO $pdo, string $sql, array $params = []): PDOStatement
+{
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt;
 }

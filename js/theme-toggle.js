@@ -1,3 +1,5 @@
+// cambio tema chiaro e scuro
+
 (function () {
     let themeButton = document.getElementById('theme-toggle');
     let brandLogo = document.getElementById('brand-logo');
@@ -33,6 +35,7 @@
         brandLogo.src = theme === 'dark' ? brandLogo.dataset.darkLogo : brandLogo.dataset.lightLogo;
     }
 
+    // applica il tema scelto
     function applyTheme(theme) {
         if (theme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');

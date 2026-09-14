@@ -1,8 +1,11 @@
 <?php
+// viewer frame e tag del film
+
 session_start();
 
 require __DIR__ . '/config.php';
 
+// id film da get
 $filmId = filter_input(INPUT_GET, 'film', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
 ]);
@@ -19,6 +22,7 @@ if (!$filmId) {
     $message = 'Parametro film non valido.';
 } else {
     try {
+        // dati film
         $filmStmt = $pdo->prepare(
             'SELECT
                 f.id_film,
@@ -27,14 +31,15 @@ if (!$filmId) {
                 f.regista,
                 f.creato_il,
                 u.username AS autore_film
-             FROM FILM f
-             INNER JOIN UTENTI u ON f.id_utente_creatore = u.id_utente
+             FROM film f
+             INNER JOIN utenti u ON f.id_utente_creatore = u.id_utente
              WHERE f.id_film = ?'
         );
         $filmStmt->execute([$filmId]);
         $film = $filmStmt->fetch();
 
         if ($film) {
+            // frame del film e conteggio voti
             $frameStmt = $pdo->prepare(
                 'SELECT
                     fr.id_frame,
@@ -45,9 +50,9 @@ if (!$filmId) {
                     u.username AS autore_frame,
                     COALESCE(SUM(fv.upvote), 0) AS frame_upvotes,
                     COALESCE(SUM(fv.downvote), 0) AS frame_downvotes
-                 FROM FRAME fr
-                 INNER JOIN UTENTI u ON fr.id_utente_creatore = u.id_utente
-                 LEFT JOIN FRAME_VOTI fv ON fv.id_frame = fr.id_frame
+                 FROM frame fr
+                 INNER JOIN utenti u ON fr.id_utente_creatore = u.id_utente
+                 LEFT JOIN frame_voti fv ON fv.id_frame = fr.id_frame
                  WHERE fr.id_film = ?
                  GROUP BY
                     fr.id_frame,
@@ -62,9 +67,10 @@ if (!$filmId) {
             $frames = $frameStmt->fetchAll();
 
             if ($isLoggedIn) {
+                // lista hardware per la select dei tag
                 $hardwareStmt = $pdo->query(
                     'SELECT id_hardware, nome_modello, produttore
-                     FROM HARDWARE
+                     FROM hardware
                      ORDER BY produttore ASC, nome_modello ASC'
                 );
                 $hardwareOptions = $hardwareStmt->fetchAll();
@@ -154,6 +160,7 @@ if ($film && !$dbError && !$mainFrame) {
         <?php endif; ?>
 
         <?php if ($film && $mainFrame): ?>
+            <!-- header film e bottone per aggiungere tag -->
             <section class="viewer-header" aria-labelledby="viewer-title">
                 <div>
                     <h1 id="viewer-title"><?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?></h1>
@@ -179,6 +186,7 @@ if ($film && !$dbError && !$mainFrame) {
             </section>
 
             <section class="viewer-layout" aria-label="Viewer frame">
+                <!-- fotogramma e layer tag -->
                 <div class="viewer-main">
                     <figure class="frame-stage">
                         <div class="frame-tag-layer">
@@ -201,9 +209,10 @@ if ($film && !$dbError && !$mainFrame) {
                                 <span id="frame-author" class="frame-meta-pill frame-meta-pill--author">
                                     Aggiunto da: <?php echo htmlspecialchars($mainFrame['autore_frame'], ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
-                                <span
+                                <div
                                     id="frame-votes"
                                     class="vote-controls"
+                                    role="group"
                                     data-frame-id="<?php echo (int) $mainFrame['id_frame']; ?>"
                                     data-frame-upvotes="<?php echo (int) $mainFrame['frame_upvotes']; ?>"
                                     data-frame-downvotes="<?php echo (int) $mainFrame['frame_downvotes']; ?>"
@@ -220,12 +229,13 @@ if ($film && !$dbError && !$mainFrame) {
                                         <span aria-hidden="true">▼</span>
                                         <span class="vote-button__count" data-vote-count="down"><?php echo (int) $mainFrame['frame_downvotes']; ?></span>
                                     </button>
-                                </span>
+                                 </div>
                             </div>
                         </figcaption>
                     </figure>
                 </div>
 
+                <!-- sidebar dettagli prop e voti -->
                 <aside class="hardware-sidebar" id="hardware-sidebar" aria-label="Dettagli prop">
                     <div class="hardware-sidebar-header">
                         <div class="hardware-sidebar-info">
@@ -237,6 +247,7 @@ if ($film && !$dbError && !$mainFrame) {
                         <div
                             class="hardware-sidebar-votes vote-controls"
                             id="sidebar-votes"
+                            role="group"
                             data-vote-target="tag"
                             data-vote-id=""
                             data-can-vote="<?php echo $isLoggedIn ? '1' : '0'; ?>"
@@ -268,6 +279,7 @@ if ($film && !$dbError && !$mainFrame) {
                 </template>
             <?php endif; ?>
 
+            <!-- timeline dei frame -->
             <section class="frame-timeline" aria-labelledby="timeline-title">
                 <div class="grid-heading">
                     <div class="heading-with-action">
@@ -279,7 +291,7 @@ if ($film && !$dbError && !$mainFrame) {
                 <ol class="timeline-list">
                     <?php foreach ($frames as $index => $frame): ?>
                         <li>
-                            <article
+                            <div
                                 class="timeline-item<?php echo $index === 0 ? ' timeline-item--active' : ''; ?>"
                                 role="button"
                                 tabindex="0"
@@ -297,7 +309,9 @@ if ($film && !$dbError && !$mainFrame) {
                                     alt="Miniatura frame <?php echo $index + 1; ?> di <?php echo htmlspecialchars($film['titolo'], ENT_QUOTES, 'UTF-8'); ?>"
                                 >
                                 <div>
-                                    <h3>Frame <?php echo $index + 1; ?></h3>
+                                    <strong class="timeline-item-title">
+                                        Frame <?php echo $index + 1; ?>
+                                    </strong>
                                     <p>
                                         <?php echo $frame['timestamp_frame'] ? htmlspecialchars($frame['timestamp_frame'], ENT_QUOTES, 'UTF-8') : 'Timestamp n/d'; ?>
                                     </p>
@@ -305,7 +319,7 @@ if ($film && !$dbError && !$mainFrame) {
                                         <?php echo htmlspecialchars($frame['autore_frame'], ENT_QUOTES, 'UTF-8'); ?>
                                     </p>
                                 </div>
-                            </article>
+                            </div>
                         </li>
                     <?php endforeach; ?>
                 </ol>

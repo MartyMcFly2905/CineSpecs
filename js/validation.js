@@ -1,3 +1,5 @@
+// controlli form e dashboard
+
 document.addEventListener('DOMContentLoaded', function () {
     setupLoginValidation();
     setupRegisterValidation();
@@ -6,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setupDashboardContent();
 });
 
+// controlli login
 function setupLoginValidation() {
     let form = document.getElementById('login-form');
 
@@ -22,13 +25,11 @@ function setupLoginValidation() {
         let password = form.querySelector('[name="password"]');
         let isValid = true;
 
-        if (!username || username.value.trim() === '') {
-            showFieldError(username, 'Inserisci lo username.');
+        if (!validateRequiredField(username, 'Inserisci lo username.')) {
             isValid = false;
         }
 
-        if (!password || password.value.trim() === '') {
-            showFieldError(password, 'Inserisci la password.');
+        if (!validateRequiredField(password, 'Inserisci la password.')) {
             isValid = false;
         }
 
@@ -39,6 +40,7 @@ function setupLoginValidation() {
     });
 }
 
+// controlli registrazione
 function setupRegisterValidation() {
     let form = document.getElementById('register-form');
 
@@ -57,24 +59,15 @@ function setupRegisterValidation() {
         let passwordConfirm = form.querySelector('[name="password_confirm"]');
         let isValid = true;
 
-        if (!email || email.value.trim() === '') {
-            showFieldError(email, 'Inserisci l\'email.');
-            isValid = false;
-        } else if (!isValidEmail(email.value.trim())) {
-            showFieldError(email, 'Inserisci un\'email valida.');
+        if (!validateFieldWithRule(email, 'Inserisci l\'email.', 'Inserisci un\'email valida.', isValidEmail)) {
             isValid = false;
         }
 
-        if (!username || username.value.trim() === '') {
-            showFieldError(username, 'Inserisci lo username.');
+        if (!validateRequiredField(username, 'Inserisci lo username.')) {
             isValid = false;
         }
 
-        if (!password || password.value.trim() === '') {
-            showFieldError(password, 'Inserisci la password.');
-            isValid = false;
-        } else if (password.value.length < 8) {
-            showFieldError(password, 'La password deve avere almeno 8 caratteri.');
+        if (!validateFieldWithRule(password, 'Inserisci la password.', 'La password deve avere almeno 8 caratteri.', val => val.length >= 8)) {
             isValid = false;
         }
 
@@ -95,6 +88,7 @@ function setupDashboardValidation() {
     setupFrameValidation();
 }
 
+// cambio schede dashboard
 function setupDashboardPanels() {
     let container = document.querySelector('[data-dashboard-active]');
     let buttons = document.querySelectorAll('[data-dashboard-target]');
@@ -129,6 +123,7 @@ function setupDashboardPanels() {
     activatePanel(container.getAttribute('data-dashboard-active'));
 }
 
+// tabella contenuti
 function setupDashboardContent() {
     let buttons = document.querySelectorAll('[data-content-action]');
     let list = document.getElementById('my-content-list');
@@ -176,7 +171,8 @@ function setupDashboardContent() {
         return url;
     }
 
-    function loadContent(action, scope, sort, direction, page) {
+    // carica i dati dal server
+    async function loadContent(action, scope, sort, direction, page) {
         currentAction = action;
         currentScope = scope || '';
         currentSort = sort || '';
@@ -187,37 +183,33 @@ function setupDashboardContent() {
         setStatus('Caricamento in corso...');
         list.innerHTML = '';
 
-        fetch(buildListUrl(action, currentScope, currentSort, currentDirection, currentPage), {
-            method: 'GET',
-        })
-            .then(function (response) {
-                return response.json().then(function (result) {
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Errore durante il caricamento.');
-                    }
-
-                    return result;
-                });
-            })
-            .then(function (result) {
-                let items = result.data.items || [];
-                let total = typeof result.data.total === 'number' ? result.data.total : items.length;
-                let pageInfo = paginationInfo(result.data, total);
-
-                if (items.length === 0 && total > 0 && pageInfo.page > pageInfo.totalPages) {
-                    loadContent(action, currentScope, currentSort, currentDirection, pageInfo.totalPages);
-                    return;
-                }
-
-                currentPage = pageInfo.page;
-                renderContent(action, items, pageInfo);
-                setStatus(statusMessage(total, pageInfo));
-                updateStatFromAction(action, total, currentScope);
-            })
-            .catch(function (error) {
-                list.innerHTML = '';
-                setStatus(error.message || 'Errore durante il caricamento.');
+        try {
+            const response = await fetch(buildListUrl(action, currentScope, currentSort, currentDirection, currentPage), {
+                method: 'GET',
             });
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Errore durante il caricamento.');
+            }
+
+            let items = result.data.items || [];
+            let total = typeof result.data.total === 'number' ? result.data.total : items.length;
+            let pageInfo = paginationInfo(result.data, total);
+
+            if (items.length === 0 && total > 0 && pageInfo.page > pageInfo.totalPages) {
+                loadContent(action, currentScope, currentSort, currentDirection, pageInfo.totalPages);
+                return;
+            }
+
+            currentPage = pageInfo.page;
+            renderContent(action, items, pageInfo);
+            setStatus(statusMessage(total, pageInfo));
+            updateStatFromAction(action, total, currentScope);
+        } catch (error) {
+            list.innerHTML = '';
+            setStatus(error.message || 'Errore durante il caricamento.');
+        }
     }
 
     function renderContent(action, items, pageInfo) {
@@ -309,6 +301,10 @@ function setupDashboardContent() {
         labels.forEach(function (label) {
             let th = document.createElement('th');
 
+            if (label.width) {
+                th.style.width = label.width;
+            }
+
             if (label.sort) {
                 let button = document.createElement('button');
                 button.type = 'button';
@@ -336,19 +332,19 @@ function setupDashboardContent() {
         if (action === 'list_my_films') {
             return [
                 { text: 'Contenuto', sort: 'name' },
-                { text: 'Dettagli', sort: '' },
-                { text: 'Data', sort: 'date' },
-                { text: 'Autore', sort: 'author' },
+                { text: 'Dettagli', sort: '', width: '25%' },
+                { text: 'Data', sort: 'date', width: '130px' },
+                { text: 'Autore', sort: 'author', width: '140px' },
                 { text: '', sort: '' },
             ];
         }
 
         return [
             { text: 'Contenuto', sort: 'name' },
-            { text: 'Film/frame', sort: 'film' },
-            { text: 'Voti', sort: 'votes' },
-            { text: 'Data', sort: 'date' },
-            { text: 'Autore', sort: 'author' },
+            { text: 'Film/frame', sort: 'film', width: '25%' },
+            { text: 'Voti', sort: 'votes', width: '100px' },
+            { text: 'Data', sort: 'date', width: '130px' },
+            { text: 'Autore', sort: 'author', width: '140px' },
             { text: '', sort: '' },
         ];
     }
@@ -465,7 +461,8 @@ function setupDashboardContent() {
         return '+' + upvotes + ' / -' + downvotes;
     }
 
-    function deleteContent(button) {
+    // elimina un elemento
+    async function deleteContent(button) {
         let action = button.getAttribute('data-delete-action');
         let idName = button.getAttribute('data-delete-id-name');
         let id = button.getAttribute('data-delete-id');
@@ -480,51 +477,51 @@ function setupDashboardContent() {
         button.disabled = true;
         setStatus('Eliminazione in corso...');
 
-        fetch('api_crud.php', {
-            method: 'POST',
-            body: formData,
-        })
-            .then(function (response) {
-                return response.json().then(function (result) {
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Errore durante l\'eliminazione.');
-                    }
-
-                    return result;
-                });
-            })
-            .then(function (result) {
-                setStatus(result.message || 'Contenuto eliminato.');
-                loadContent(currentAction, currentScope, currentSort, currentDirection, currentPage);
-                refreshDashboardStats();
-            })
-            .catch(function (error) {
-                button.disabled = false;
-                setStatus(error.message || 'Errore durante l\'eliminazione.');
+        try {
+            const response = await fetch('api_crud.php', {
+                method: 'POST',
+                body: formData,
             });
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Errore durante l\'eliminazione.');
+            }
+
+            setStatus(result.message || 'Contenuto eliminato.');
+            loadContent(currentAction, currentScope, currentSort, currentDirection, currentPage);
+            refreshDashboardStats();
+        } catch (error) {
+            button.disabled = false;
+            setStatus(error.message || 'Errore durante l\'eliminazione.');
+        }
     }
 
-    function refreshDashboardStats() {
-        buttons.forEach(function (button) {
+    async function refreshDashboardStats() {
+        for (const button of buttons) {
             let action = button.getAttribute('data-content-action');
             let scope = button.getAttribute('data-content-scope') || '';
 
-            fetch(buildListUrl(action, scope, '', 'desc', 1), {
-                method: 'GET',
-            })
-                .then(function (response) {
-                    return response.ok ? response.json() : null;
-                })
-                .then(function (result) {
-                    if (result && result.success && result.data.items) {
-                        let total = typeof result.data.total === 'number'
-                            ? result.data.total
-                            : result.data.items.length;
-                        updateStatFromAction(action, total, scope);
-                    }
-                })
-                .catch(function () {});
-        });
+            try {
+                const response = await fetch(buildListUrl(action, scope, '', 'desc', 1), {
+                    method: 'GET',
+                });
+
+                if (!response.ok) {
+                    continue;
+                }
+
+                const result = await response.json();
+
+                if (result && result.success && result.data.items) {
+                    let total = typeof result.data.total === 'number'
+                        ? result.data.total
+                        : result.data.items.length;
+                    updateStatFromAction(action, total, scope);
+                }
+            } catch (_) {
+            }
+        }
     }
 
     function updateStatFromAction(action, count, scope) {
@@ -599,6 +596,7 @@ function setupDashboardContent() {
     });
 }
 
+// controlli form film
 function setupFilmValidation() {
     let form = document.getElementById('film-form');
 
@@ -616,21 +614,15 @@ function setupFilmValidation() {
         let director = form.querySelector('[name="regista"]');
         let isValid = true;
 
-        if (!title || title.value.trim() === '') {
-            showFieldError(title, 'Inserisci il titolo del film.');
+        if (!validateRequiredField(title, 'Inserisci il titolo del film.')) {
             isValid = false;
         }
 
-        if (!year || year.value.trim() === '') {
-            showFieldError(year, 'Inserisci l\'anno di uscita.');
-            isValid = false;
-        } else if (!isValidYear(year.value.trim())) {
-            showFieldError(year, 'Inserisci un anno valido.');
+        if (!validateFieldWithRule(year, 'Inserisci l\'anno di uscita.', 'Inserisci un anno valido.', isValidYear)) {
             isValid = false;
         }
 
-        if (!director || director.value.trim() === '') {
-            showFieldError(director, 'Inserisci il regista.');
+        if (!validateRequiredField(director, 'Inserisci il regista.')) {
             isValid = false;
         }
 
@@ -641,6 +633,7 @@ function setupFilmValidation() {
     });
 }
 
+// controlli form frame
 function setupFrameValidation() {
     let form = document.getElementById('frame-form');
 
@@ -658,16 +651,11 @@ function setupFrameValidation() {
         let image = form.querySelector('[name="immagine_frame"]');
         let isValid = true;
 
-        if (!film || film.value.trim() === '') {
-            showFieldError(film, 'Seleziona un film.');
+        if (!validateRequiredField(film, 'Seleziona un film.')) {
             isValid = false;
         }
 
-        if (!timestamp || timestamp.value.trim() === '') {
-            showFieldError(timestamp, 'Inserisci il timestamp.');
-            isValid = false;
-        } else if (!isValidTime(timestamp.value.trim())) {
-            showFieldError(timestamp, 'Usa il formato HH:MM o HH:MM:SS.');
+        if (!validateFieldWithRule(timestamp, 'Inserisci il timestamp.', 'Usa il formato HH:MM:SS.', isValidTime)) {
             isValid = false;
         }
 
@@ -717,6 +705,7 @@ function ensureErrorElement(field) {
     group.appendChild(error);
 }
 
+// mostra errore sotto il campo
 function showFieldError(field, message) {
     if (!field) {
         return;
@@ -769,18 +758,39 @@ function clearFormErrors(form) {
     });
 }
 
-function isValidEmail(value) {
-    return value.includes('@') && value.includes('.');
-}
-
-function isValidYear(value) {
-    if (!/^[0-9]{4}$/.test(value)) {
+function validateRequiredField(field, message) {
+    if (!field || field.value.trim() === '') {
+        showFieldError(field, message);
         return false;
     }
 
-    return Number(value) >= 1888 && Number(value) <= new Date().getFullYear();
+    return true;
+}
+
+function validateFieldWithRule(field, emptyMessage, invalidMessage, ruleFn) {
+    if (!field || field.value.trim() === '') {
+        showFieldError(field, emptyMessage);
+        return false;
+    }
+
+    if (!ruleFn(field.value.trim())) {
+        showFieldError(field, invalidMessage);
+        return false;
+    }
+
+    return true;
+}
+
+function isValidYear(value) {
+    let year = parseInt(value, 10);
+    let currentYear = new Date().getFullYear();
+    return /^\d{4}$/.test(value) && year >= 1888 && year <= currentYear;
 }
 
 function isValidTime(value) {
-    return /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value);
+    return /^\d{1,2}:[0-5]\d:[0-5]\d$/.test(value);
+}
+
+function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

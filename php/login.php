@@ -1,6 +1,8 @@
 <?php
+// Pagina di login
 session_start();
 
+// Se gia loggato va diretto alla dashboard
 if (isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
     header('Location: dashboard.php');
     exit;
@@ -74,30 +76,6 @@ if (isset($_SESSION['id_utente'], $_SESSION['username'], $_SESSION['ruolo'])) {
 
 <script src="../js/theme-toggle.js?v=<?php echo filemtime(__DIR__ . '/../js/theme-toggle.js'); ?>"></script>
 <script src="../js/validation.js?v=<?php echo filemtime(__DIR__ . '/../js/validation.js'); ?>"></script>
-<script>
-const loginForm = document.getElementById('login-form');
-const loginMessage = document.getElementById('login-message');
-
-loginForm.addEventListener('submit', async function (event) {
-    event.preventDefault();
-    loginMessage.textContent = 'Accesso in corso...';
-
-    try {
-        const response = await fetch('auth.php', {
-            method: 'POST',
-            body: new FormData(loginForm)
-        });
-
-        const result = await response.json();
-        loginMessage.textContent = result.message;
-
-        if (result.success) {
-            window.location.href = 'dashboard.php';
-        }
-    } catch (error) {
-        loginMessage.textContent = 'Errore di rete. Riprova.';
-    }
-});
-</script>
+<script src="../js/auth-forms.js?v=<?php echo filemtime(__DIR__ . '/../js/auth-forms.js'); ?>"></script>
 </body>
 </html>
